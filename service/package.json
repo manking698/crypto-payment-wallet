@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "ethers": "^6.16.0",
+    "mongoose": "^9.6.1",
+    "p-limit": "^7.3.0"
+  }
+}

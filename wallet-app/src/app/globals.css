@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4f7fb;
+  --foreground: #162033;
+  --muted: #6d7890;
+  --card: #ffffff;
+  --line: #dbe5f2;
+  --brand: #2563eb;
+  --brand-soft: #e7f0ff;
+  --success: #0f9f6e;
+  --danger: #d94c4c;
+  --shadow: 0 24px 80px rgba(37, 99, 235, 0.08);
+  --radius-pill: 0.95rem;
+  --radius-lg: 0.65rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.35rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.12), transparent 22%),
+    linear-gradient(180deg, #f8fbff 0%, #f4f7fb 38%, #eef3f9 100%);
+  color: var(--foreground);
+  font-family: Verdana, Geneva, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.font-heading {
+  font-family: Verdana, Geneva, sans-serif;
+}
+
+/* Unified UI state tokens */
+.ui-state-selected {
+  border-color: #3b72df !important;
+  background: #edf3ff !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 22px rgba(59, 114, 223, 0.12);
+}
+
+.ui-state-unselected {
+  border-color: #e2e8f0 !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+}
+
+.ui-state-unselected:hover {
+  background: #f8fafc !important;
+}
+
+.ui-state-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Unified blue button system (compact) */
+.btn-theme-primary {
+  min-height: 34px;
+  border-radius: 0.72rem;
+  border: 1px solid #2f67d8;
+  background: #3569d4;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(53, 105, 212, 0.24);
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+
+.btn-theme-primary:hover {
+  background: #2f5fc2;
+  box-shadow: 0 10px 22px rgba(53, 105, 212, 0.28);
+}
+
+.btn-theme-primary:active {
+  transform: translateY(1px);
+}
+
+.btn-theme-secondary {
+  min-height: 34px;
+  border-radius: 0.72rem;
+  border: 1px solid #cfe0ff;
+  background: #f3f8ff;
+  color: #1e3a8a;
+  box-shadow: 0 8px 20px rgba(53, 105, 212, 0.12);
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.btn-theme-secondary:hover {
+  background: #eaf2ff;
+  box-shadow: 0 10px 22px rgba(53, 105, 212, 0.18);
+}
+
+.btn-theme-ghost {
+  min-height: 34px;
+  border-radius: 0.72rem;
+  border: 1px solid #d8e6ff;
+  background: #f8fbff;
+  color: #3569d4;
+}
+
+/* Remove browser autofill yellow background (iOS Safari/Chromium). */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f172a !important;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  transition: background-color 9999s ease-out 0s;
+}

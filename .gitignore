@@ -1,0 +1,40 @@
+# dependencies
+**/node_modules/
+
+# build artifacts
+**/.next/
+**/dist/
+**/build/
+**/coverage/
+**/*.tsbuildinfo
+
+# env files
+**/.env
+**/.env.local
+**/.env.*.local
+
+# logs
+**/logs/
+**/*.log
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# solidity/remix/hardhat/foundry temporary files
+**/artifacts/
+**/cache/
+**/broadcast/
+**/typechain/
+**/out/
+**/.deps/
+**/.cache/
+
+# docs (per request)
+**/*.md

@@ -1,0 +1,31 @@
+{
+  "name": "vault-api-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "monitor": "node monitor.js",
+    "script:seed-vaults": "node scripts/seed-test-vaults.js",
+    "script:simulate-deposits": "node scripts/simulate-multichain-deposits.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@ensofinance/sdk": "^2.0.12",
+    "@hyperlane-xyz/sdk": "^29.1.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.16.0",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.2.4",
+    "p-limit": "^7.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
