@@ -100,6 +100,7 @@ export default function PaymentTestPage() {
 
     useEffect(() => {
         setMounted(true);
+        document.title = "Crypto Payment Wallet - Payment test";
     }, []);
 
 

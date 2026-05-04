@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Droplets, Gift } from "lucide-react";
 import { claimFaucet, getFaucetStatus } from "@/lib/api";
@@ -37,6 +37,10 @@ export default function FaucetPage() {
     const [vaultAddress, setVaultAddress] = useState("");
     const [claimType, setClaimType] = useState<ClaimType>("USDT");
     const [resultText, setResultText] = useState("");
+
+    useEffect(() => {
+        document.title = "Crypto Payment Wallet - Faucet";
+    }, []);
 
     const normalizedAddress = vaultAddress.trim();
     const canLookup = isEvmAddress(normalizedAddress);
