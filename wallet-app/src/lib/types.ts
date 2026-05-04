@@ -1,8 +1,10 @@
+import type { WalletTokenKey } from "@/lib/domain-rules";
+
 export type UserProfile = {
     email: string;
     vaultAddress: string;
     defaultChainId: number;
-    spendPriorityToken?: "USDT" | "USDC" | "WETH";
+    spendPriorityToken?: WalletTokenKey;
     displayCurrency?: string;
 };
 
@@ -63,7 +65,7 @@ export type DashboardTransaction = {
 };
 
 export type DashboardAsset = {
-    symbol: "USDT" | "USDC" | "WETH";
+    symbol: WalletTokenKey;
     balance: string;
     usdValue: string;
     decimals: number;
@@ -72,7 +74,7 @@ export type DashboardAsset = {
 export type DashboardSummary = {
     vaultAddress: string;
     defaultChainId: number;
-    spendPriorityToken?: "USDT" | "USDC" | "WETH";
+    spendPriorityToken?: WalletTokenKey;
     totalBalanceUsd: string;
     assets: DashboardAsset[];
     transactions: DashboardTransaction[];
@@ -124,7 +126,7 @@ export type AppNotification = {
     createdAt?: string | null;
 };
 
-export type EarnTokenSymbol = "USDT" | "USDC" | "WETH";
+export type EarnTokenSymbol = WalletTokenKey;
 export type EarnHistoryKind = "subscribe" | "redemption" | "rewards";
 
 export type EarnPoolSummary = {

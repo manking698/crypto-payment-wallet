@@ -10,6 +10,7 @@ import type {
     UserCard,
     UserProfile
 } from "@/lib/types";
+import type { WalletTokenKey } from "@/lib/domain-rules";
 import { useAuthStore } from "@/store/auth-store";
 
 function resolveApiBaseUrl() {
@@ -137,8 +138,8 @@ export async function withdrawFunds(input: {
     });
 }
 
-export async function updateSpendPriorityToken(input: { token: "USDT" | "USDC" | "WETH" }) {
-    return request<{ success: boolean; spendPriorityToken: "USDT" | "USDC" | "WETH" }>("/api/user/spend-priority", {
+export async function updateSpendPriorityToken(input: { token: WalletTokenKey }) {
+    return request<{ success: boolean; spendPriorityToken: WalletTokenKey }>("/api/user/spend-priority", {
         method: "POST",
         body: JSON.stringify(input),
     });
@@ -238,7 +239,7 @@ export async function simulateCardPayment(input: {
         paymentCurrency: string;
         paymentAmount: string;
         usdAmount: string;
-        spendPriorityToken: "USDT" | "USDC" | "WETH";
+        spendPriorityToken: WalletTokenKey;
         priorityFlow: string[];
         plannedTokens: Array<{
             tokenSymbol: string;
@@ -264,8 +265,8 @@ export async function simulateCardPayment(input: {
 }
 
 export async function getSwapQuote(input: {
-    fromSymbol: "USDT" | "USDC" | "WETH";
-    toSymbol: "USDT" | "USDC" | "WETH";
+    fromSymbol: WalletTokenKey;
+    toSymbol: WalletTokenKey;
     amount: string;
 }) {
     return request<{
@@ -282,8 +283,8 @@ export async function getSwapQuote(input: {
 }
 
 export async function executeSwap(input: {
-    fromSymbol: "USDT" | "USDC" | "WETH";
-    toSymbol: "USDT" | "USDC" | "WETH";
+    fromSymbol: WalletTokenKey;
+    toSymbol: WalletTokenKey;
     amount: string;
 }) {
     return request<{

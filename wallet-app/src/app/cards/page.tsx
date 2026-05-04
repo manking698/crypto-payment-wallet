@@ -102,7 +102,7 @@ function AppHeader(props: { email?: string; right?: React.ReactNode }) {
                     <CreditCard size={27} />
                 </div>
                 <div>
-                    <p className="text-[0.95rem] text-slate-500">Personal</p>
+                    <p className="text-[0.95rem] text-slate-500">Personal (testnet)</p>
                     <h1 className={`${TYPO.pageTitle}`}>My Account</h1>
                     <p className="mt-1 text-[0.78rem] text-slate-400">{props.email || "wallet@demo.com"}</p>
                 </div>
@@ -263,18 +263,18 @@ function AddCardScreen(props: {
                     </button>
                 </section>
             </div>
-            <ProcessingLayer open={props.loading} text="processing..." zIndexClassName="z-[70]" />
+            <ProcessingLayer open={Boolean(props.loading)} text="processing..." zIndexClassName="z-[70]" />
         </main>
     );
 }
 
 function ActionButton(props: { icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean }) {
     return (
-        <button type="button" disabled={props.disabled} onClick={props.onClick} className={`flex flex-col items-center gap-2.5 ${props.disabled ? "opacity-45" : ""}`}>
-            <span className="flex h-[4.05rem] w-[4.05rem] items-center justify-center rounded-full border border-[#cfe0ff] bg-[#f3f8ff] text-[#3468d4] shadow-[0_6px_16px_rgba(59,114,223,0.14)]">
+        <button type="button" disabled={props.disabled} onClick={props.onClick} className={`group flex flex-col items-center gap-2 ${props.disabled ? "opacity-45" : ""}`}>
+            <span className="flex h-[3.5rem] w-[3.5rem] items-center justify-center rounded-full border border-[#cfe0ff] bg-[#3b78e7] text-white shadow-[0_10px_20px_rgba(59,120,231,0.22)] transition duration-200 group-hover:brightness-105">
                 {props.icon}
             </span>
-            <span className="text-[0.95rem] font-medium text-slate-800">{props.label}</span>
+            <span className="text-[0.9rem] font-medium text-slate-800">{props.label}</span>
         </button>
     );
 }

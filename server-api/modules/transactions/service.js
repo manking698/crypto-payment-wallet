@@ -100,6 +100,54 @@ function matchTransactionTypes(tx, selectedTypes) {
     return selectedTypes.includes(tx.direction);
 }
 
+function collapseDirectionalDuplicatesByVault(items, vaultAddress) {
+    const normalizedVault = String(vaultAddress || "").trim().toLowerCase();
+    if (!normalizedVault) return items;
+
+    const groups = new Map();
+    for (const tx of items) {
+        const txHash = String(tx?.txHash || "").trim().toLowerCase();
+        const direction = String(tx?.direction || "").trim().toLowerCase();
+        if (!txHash || (direction !== "in" && direction !== "out")) continue;
+        const chainId = Number(tx?.chainId || 11155111);
+        const tokenSymbol = String(tx?.tokenSymbol || "").trim().toUpperCase();
+        const key = `${chainId}|${txHash}|${tokenSymbol}`;
+        const rows = groups.get(key) || [];
+        rows.push(tx);
+        groups.set(key, rows);
+    }
+
+    const dropIds = new Set();
+    for (const rows of groups.values()) {
+        if (!rows.length) continue;
+        const hasIn = rows.some((tx) => String(tx?.direction || "").toLowerCase() === "in");
+        const hasOut = rows.some((tx) => String(tx?.direction || "").toLowerCase() === "out");
+        if (!hasIn || !hasOut) continue;
+
+        const outboundMatch = rows.find((tx) => {
+            const from = String(tx?.from || "").trim().toLowerCase();
+            const sender = String(tx?.origSender || "").trim().toLowerCase();
+            return String(tx?.direction || "").toLowerCase() === "out"
+                && (from === normalizedVault || sender === normalizedVault);
+        });
+        const inboundMatch = rows.find((tx) => {
+            const to = String(tx?.to || "").trim().toLowerCase();
+            return String(tx?.direction || "").toLowerCase() === "in" && to === normalizedVault;
+        });
+
+        const keepDirection = outboundMatch ? "out" : (inboundMatch ? "in" : "");
+        if (!keepDirection) continue;
+
+        for (const tx of rows) {
+            if (String(tx?.direction || "").toLowerCase() !== keepDirection) {
+                dropIds.add(String(tx?.id || ""));
+            }
+        }
+    }
+
+    return items.filter((tx) => !dropIds.has(String(tx?.id || "")));
+}
+
 function buildVaultTransactionsBaseQuery(vaultAddress, fromDate, toDate) {
     const query = {
         chainId: 11155111,
@@ -188,14 +236,15 @@ function createTransactionsService(deps) {
             .filter((tx) => matchTransactionTypes(tx, selectedTypes));
 
         const dedupedTxs = await enrichCardPaymentRows(dedupeMappedTransactions(filteredTxs));
-        const total = dedupedTxs.length;
+        const directionalCollapsed = collapseDirectionalDuplicatesByVault(dedupedTxs, vaultAddress);
+        const total = directionalCollapsed.length;
         const start = (page - 1) * limit;
         return {
             page,
             limit,
             total,
             hasMore: start + limit < total,
-            transactions: dedupedTxs.slice(start, start + limit)
+            transactions: directionalCollapsed.slice(start, start + limit)
         };
     }
 
@@ -255,7 +304,7 @@ function createTransactionsService(deps) {
         const cardPaymentTxHashSet = await getCardPaymentTxHashSetByVault(vaultAddress);
         const visibleLatestTxs = hideRawCardSettlementRows(latestTxs.map(mapTransactionForClient), cardPaymentTxHashSet);
         const dedupedLatestTxs = await enrichCardPaymentRows(dedupeMappedTransactions(visibleLatestTxs));
-        return dedupedLatestTxs.slice(0, limit);
+        return collapseDirectionalDuplicatesByVault(dedupedLatestTxs, vaultAddress).slice(0, limit);
     }
 
     async function getPublicLatest(vaultAddress, limit = 5) {

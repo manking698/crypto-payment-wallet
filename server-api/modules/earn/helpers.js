@@ -11,7 +11,8 @@ function createEarnHelpers({
     EARN_CONTRACT_ABI,
     provider,
     backendSigner,
-    decimalToScaledBigInt
+    decimalToScaledBigInt,
+    validateEarnAmountInput
 }) {
     function getEarnTokenAddress(symbol) {
         const normalized = String(symbol || "").toUpperCase();
@@ -20,6 +21,9 @@ function createEarnHelpers({
     }
 
     function parseEarnAmount(symbol, amountText, options = {}) {
+        if (typeof validateEarnAmountInput === "function") {
+            return validateEarnAmountInput(symbol, amountText, options);
+        }
         const enforceMin = options.enforceMin !== false;
         const token = String(symbol || "").toUpperCase();
         const input = String(amountText || "").trim();
@@ -58,4 +62,3 @@ function createEarnHelpers({
 module.exports = {
     createEarnHelpers
 };
-

@@ -24,7 +24,7 @@ function createSwapService(input) {
             userId
         } = payload;
 
-        await persistLedgerTransaction({
+        const journalResult = await persistLedgerTransaction({
             txId: `${txHash}:swap`,
             chainId,
             blockNumber: Number(payload?.blockNumber || 0),
@@ -60,6 +60,8 @@ function createSwapService(input) {
             message: `${fromAmountText} ${fromSymbol} to ${toAmountText} ${toSymbol}`,
             relatedTransactionId: swapTx?._id || null
         });
+
+        return { journalResult };
     }
 
     return {
@@ -70,4 +72,3 @@ function createSwapService(input) {
 module.exports = {
     createSwapService
 };
-

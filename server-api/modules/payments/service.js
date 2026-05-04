@@ -34,7 +34,7 @@ function createPaymentsService(input) {
             blockNumber
         } = payload;
 
-        await persistLedgerTransaction({
+        return persistLedgerTransaction({
             chainId,
             blockNumber: Number(blockNumber || 0),
             txHash,
@@ -119,4 +119,3 @@ function createPaymentsService(input) {
 module.exports = {
     createPaymentsService
 };
-

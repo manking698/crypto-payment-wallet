@@ -354,7 +354,7 @@ function mapVaultTransactions(transactions: DashboardTransaction[]): DisplayTran
         const swapFromFormatted = formatAmountForTx(swapFromAmount, 8);
         const swapToFormatted = formatAmountForTx(swapToAmount, 8);
         const earnDirectionLabel = tx.direction === "earn-subscribe"
-            ? "Earn Subscribe"
+            ? "Earn deposit"
             : tx.direction === "earn-redemption"
                 ? "Earn redemption"
                 : "Earn reward";
@@ -465,42 +465,17 @@ function ActionItem(props: {
     href?: string;
     icon: React.ReactNode;
     label: string;
-    primary?: boolean;
-    tone?: "gold" | "blue" | "violet";
 }) {
-    const { href, icon, label, primary, tone = "gold" } = props;
-    const toneStyles = {
-        gold: {
-            ring: "border-[#cfe0ff]",
-            bg: primary ? "bg-[#dbe8ff]" : "bg-[#f3f8ff]",
-            text: primary ? "text-[#1e3a8a]" : "text-[#3468d4]",
-            shadow: "shadow-[0_6px_16px_rgba(59,114,223,0.14)]"
-        },
-        blue: {
-            ring: "border-[#cfe0ff]",
-            bg: "bg-[#f4f8ff]",
-            text: "text-[#3b72df]",
-            shadow: "shadow-[0_6px_16px_rgba(59,114,223,0.14)]"
-        },
-        violet: {
-            ring: "border-[#d9e4fb]",
-            bg: "bg-[#f2f7ff]",
-            text: "text-[#4d78d8]",
-            shadow: "shadow-[0_6px_16px_rgba(59,114,223,0.14)]"
-        }
-    } as const;
-    const chosenTone = toneStyles[tone];
+    const { href, icon, label } = props;
 
     const content = (
-        <div className="group flex flex-col items-center gap-2.5">
+        <div className="group flex flex-col items-center gap-2">
             <div
-                className={`relative flex h-[4.05rem] w-[4.05rem] items-center justify-center rounded-full border transition duration-200 group-hover:bg-white ${chosenTone.ring
-                    } ${chosenTone.bg} ${chosenTone.text} ${chosenTone.shadow} ${primary ? "after:absolute after:inset-0 after:rounded-full after:border after:border-white/45" : ""
-                    }`}
+                className="relative flex h-[3.5rem] w-[3.5rem] items-center justify-center rounded-full border border-[#cfe0ff] bg-[#3b78e7] text-white shadow-[0_10px_20px_rgba(59,120,231,0.22)] transition duration-200 group-hover:brightness-105"
             >
                 {icon}
             </div>
-            <span className="text-[0.98rem] font-medium text-slate-800">{label}</span>
+            <span className="text-[0.9rem] font-medium text-slate-800">{label}</span>
         </div>
     );
 
@@ -847,7 +822,7 @@ export default function DashboardPage() {
                             <Wallet size={28} strokeWidth={1.8} />
                         </div>
                         <div>
-                            <p className="text-[0.95rem] text-slate-500">Personal</p>
+                            <p className="text-[0.95rem] text-slate-500">Personal (testnet)</p>
                             <div className="flex items-center gap-2">
                                 <h1 className={`${TYPO.pageTitle}`}>My Account</h1>
                             </div>
@@ -912,9 +887,9 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="mt-6 grid grid-cols-3 gap-4">
-                        <ActionItem href="/deposit" icon={<Plus size={27} strokeWidth={2.3} />} label="Add Funds" tone="gold" />
-                        <ActionItem href="/send" icon={<Send size={24} strokeWidth={2.25} />} label="Send" tone="blue" />
-                        <ActionItem href="/convert" icon={<RefreshCw size={24} strokeWidth={2.25} />} label="Convert" tone="violet" />
+                        <ActionItem href="/deposit" icon={<Plus size={22} strokeWidth={2.35} />} label="Add Funds" />
+                        <ActionItem href="/send" icon={<Send size={20} strokeWidth={2.35} />} label="Send" />
+                        <ActionItem href="/convert" icon={<RefreshCw size={20} strokeWidth={2.35} />} label="Convert" />
                     </div>
                 </section>
 

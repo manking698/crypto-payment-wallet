@@ -23,14 +23,41 @@ function createLedgerService(input) {
         return [chainId, txHash, direction, tokenSymbol, paymentId, from, to, amount].join("|");
     }
 
-    async function upsertLedgerTransactionPayload(payload) {
+    function buildFallbackTxId(payload) {
+        const chainId = Number(payload?.chainId || 11155111);
+        const txHash = String(payload?.txHash || "").trim().toLowerCase();
+        const direction = String(payload?.direction || "").trim().toLowerCase();
+        const tokenSymbol = String(payload?.tokenSymbol || "").trim().toUpperCase();
+        const paymentId = String(payload?.paymentId || "").trim();
+        const from = String(payload?.from || "").trim().toLowerCase();
+        const to = String(payload?.to || "").trim().toLowerCase();
+        const amount = String(payload?.amount || "").trim();
+        return [chainId, txHash, direction, tokenSymbol, paymentId, from, to, amount].join(":");
+    }
+
+    function normalizeLedgerPayload(rawPayload) {
+        const payload = { ...(rawPayload || {}) };
+        payload.chainId = Number(payload?.chainId || 11155111);
+        payload.txHash = String(payload?.txHash || "").trim().toLowerCase();
+        payload.from = String(payload?.from || "").trim().toLowerCase();
+        payload.to = String(payload?.to || "").trim().toLowerCase();
+        payload.direction = String(payload?.direction || "").trim().toLowerCase();
+        payload.tokenSymbol = String(payload?.tokenSymbol || "").trim().toUpperCase();
+        payload.amount = String(payload?.amount || "").trim();
+        payload.txId = String(payload?.txId || "").trim() || buildFallbackTxId(payload);
+        return payload;
+    }
+
+    async function upsertLedgerTransactionPayload(rawPayload) {
+        const payload = normalizeLedgerPayload(rawPayload);
         const query = {
-            chainId: Number(payload?.chainId || 11155111),
-            txHash: String(payload?.txHash || "").toLowerCase(),
-            direction: String(payload?.direction || ""),
-            tokenSymbol: String(payload?.tokenSymbol || ""),
-            from: String(payload?.from || "").toLowerCase(),
-            to: String(payload?.to || "").toLowerCase(),
+            txId: String(payload.txId),
+            chainId: Number(payload.chainId || 11155111),
+            txHash: String(payload.txHash || "").toLowerCase(),
+            direction: String(payload.direction || ""),
+            tokenSymbol: String(payload.tokenSymbol || ""),
+            from: String(payload.from || "").toLowerCase(),
+            to: String(payload.to || "").toLowerCase(),
             paymentId: payload?.paymentId || undefined
         };
         await Transaction.updateOne(
@@ -40,7 +67,8 @@ function createLedgerService(input) {
         );
     }
 
-    async function enqueueLedgerOutbox(payload, errorMessage) {
+    async function enqueueLedgerOutbox(rawPayload, errorMessage) {
+        const payload = normalizeLedgerPayload(rawPayload);
         const dedupeKey = buildLedgerDedupeKey(payload);
         const now = new Date();
         await LedgerOutbox.updateOne(
@@ -69,13 +97,15 @@ function createLedgerService(input) {
         );
     }
 
-    async function persistTransaction(payload) {
+    async function persistTransaction(rawPayload) {
+        const payload = normalizeLedgerPayload(rawPayload);
+        const dedupeKey = buildLedgerDedupeKey(payload);
         try {
             await upsertLedgerTransactionPayload(payload);
-            return { ok: true };
+            return { ok: true, queued: false, dedupeKey, txId: payload.txId };
         } catch (err) {
             await enqueueLedgerOutbox(payload, err?.message || "journal write failed");
-            return { ok: false, queued: true, error: err };
+            return { ok: false, queued: true, dedupeKey, txId: payload.txId, error: err };
         }
     }
 
@@ -121,6 +151,73 @@ function createLedgerService(input) {
         }
     }
 
+    async function listOutbox(params) {
+        const pageRaw = Number(params?.page || 1);
+        const limitRaw = Number(params?.limit || 20);
+        const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+        const limit = Number.isFinite(limitRaw) && limitRaw > 0
+            ? Math.min(200, Math.floor(limitRaw))
+            : 20;
+        const status = String(params?.status || "all").trim().toLowerCase();
+
+        const query = {};
+        if (status !== "all") {
+            query.status = status;
+        }
+
+        const total = await LedgerOutbox.countDocuments(query);
+        const rows = await LedgerOutbox.find(query)
+            .sort({ updatedAt: -1, createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean();
+
+        return {
+            page,
+            limit,
+            total,
+            hasMore: page * limit < total,
+            items: rows
+        };
+    }
+
+    async function getOutboxFailureStats() {
+        const pipeline = [
+            { $match: { status: "failed" } },
+            {
+                $project: {
+                    reason: {
+                        $cond: [
+                            { $gt: [{ $strLenCP: { $ifNull: ["$lastError", ""] } }, 0] },
+                            {
+                                $substrCP: [
+                                    { $ifNull: ["$lastError", "unknown"] },
+                                    0,
+                                    120
+                                ]
+                            },
+                            "unknown"
+                        ]
+                    }
+                }
+            },
+            { $group: { _id: "$reason", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 50 }
+        ];
+
+        const byReason = await LedgerOutbox.aggregate(pipeline);
+        const totalFailed = byReason.reduce((sum, row) => sum + Number(row?.count || 0), 0);
+
+        return {
+            totalFailed,
+            byReason: byReason.map((row) => ({
+                reason: String(row?._id || "unknown"),
+                count: Number(row?.count || 0)
+            }))
+        };
+    }
+
     function startProcessor(options) {
         const intervalMs = Number(options?.intervalMs || 5000);
         const batchSize = Number(options?.batchSize || 30);
@@ -138,11 +235,12 @@ function createLedgerService(input) {
     return {
         persistTransaction,
         processOutboxBatch,
-        startProcessor
+        startProcessor,
+        listOutbox,
+        getOutboxFailureStats
     };
 }
 
 module.exports = {
     createLedgerService
 };
-

@@ -113,7 +113,7 @@ export default function EarnPage() {
                                         <p className="mt-0.5 text-[0.96rem] text-emerald-500">APY {Number(pool?.apy || 0).toFixed(2)}%</p>
                                     </div>
                                     <span className="btn-theme-primary inline-flex h-9 items-center gap-1.5 px-4 text-[0.9rem]">
-                                        Subscribe <ArrowUpRight size={14} />
+                                        View <ArrowUpRight size={14} />
                                     </span>
                                 </div>
                                 <div className="mt-3 grid grid-cols-20 gap-2 border-t border-slate-100 pt-3">

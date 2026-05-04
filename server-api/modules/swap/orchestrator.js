@@ -17,6 +17,7 @@ function createSwapOrchestrator(deps) {
         VAULT_SWAP_ABI,
         ERC20_ABI,
         normalizeSwapSymbol,
+        validateSwapInput,
         decimalToScaledBigInt,
         scaledBigIntToDecimal,
         getVaultTokenSnapshot,
@@ -26,19 +27,30 @@ function createSwapOrchestrator(deps) {
         swapService
     } = deps;
 
-    async function quote(reqBody, vaultAddress) {
+    function parseSwapRequest(reqBody) {
+        if (typeof validateSwapInput === "function") {
+            const parsed = validateSwapInput(reqBody);
+            if (!parsed.ok) throw createSwapError(400, parsed.error);
+            return parsed;
+        }
         const fromSymbol = normalizeSwapSymbol(reqBody?.fromSymbol);
         const toSymbol = normalizeSwapSymbol(reqBody?.toSymbol);
         const amount = String(reqBody?.amount || "").trim();
 
-        if (!vaultAddress) throw createSwapError(400, "missing vault address");
         if (!fromSymbol || !toSymbol) throw createSwapError(400, "invalid token symbol");
         if (fromSymbol === toSymbol) throw createSwapError(400, "source and target token cannot be same");
         if (!/^\d+(\.\d+)?$/.test(amount)) throw createSwapError(400, "invalid amount");
 
         const fromDecimals = TOKEN_DECIMALS_BY_SYMBOL[fromSymbol];
+        const toDecimals = TOKEN_DECIMALS_BY_SYMBOL[toSymbol];
         const fromAmountRaw = decimalToScaledBigInt(amount, fromDecimals);
         if (fromAmountRaw <= 0n) throw createSwapError(400, "amount must be greater than zero");
+        return { fromSymbol, toSymbol, amount, fromAmountRaw, fromDecimals, toDecimals };
+    }
+
+    async function quote(reqBody, vaultAddress) {
+        if (!vaultAddress) throw createSwapError(400, "missing vault address");
+        const { fromSymbol, toSymbol, fromAmountRaw, fromDecimals } = parseSwapRequest(reqBody);
 
         const { snapshot: onchainSnapshot } = await getVaultTokenSnapshot(vaultAddress);
         const frozenBySymbol = await getFrozenTokenRawByVault(vaultAddress);
@@ -69,20 +81,10 @@ function createSwapOrchestrator(deps) {
     }
 
     async function execute(reqBody, vaultAddress, userId) {
-        const fromSymbol = normalizeSwapSymbol(reqBody?.fromSymbol);
-        const toSymbol = normalizeSwapSymbol(reqBody?.toSymbol);
-        const amount = String(reqBody?.amount || "").trim();
         const chainId = 11155111;
 
         if (!vaultAddress) throw createSwapError(400, "missing vault address");
-        if (!fromSymbol || !toSymbol) throw createSwapError(400, "invalid token symbol");
-        if (fromSymbol === toSymbol) throw createSwapError(400, "source and target token cannot be same");
-        if (!/^\d+(\.\d+)?$/.test(amount)) throw createSwapError(400, "invalid amount");
-
-        const fromDecimals = TOKEN_DECIMALS_BY_SYMBOL[fromSymbol];
-        const toDecimals = TOKEN_DECIMALS_BY_SYMBOL[toSymbol];
-        const fromAmountRaw = decimalToScaledBigInt(amount, fromDecimals);
-        if (fromAmountRaw <= 0n) throw createSwapError(400, "amount must be greater than zero");
+        const { fromSymbol, toSymbol, fromAmountRaw, fromDecimals, toDecimals } = parseSwapRequest(reqBody);
 
         const { snapshot: onchainSnapshot } = await getVaultTokenSnapshot(vaultAddress);
         const frozenBySymbol = await getFrozenTokenRawByVault(vaultAddress);
@@ -135,7 +137,7 @@ function createSwapOrchestrator(deps) {
         const toAmountText = ethers.formatUnits(toAmountRaw, toDecimals);
         const timestamp = new Date();
 
-        await swapService.recordSwapCompletion({
+        const recordResult = await swapService.recordSwapCompletion({
             chainId,
             blockNumber: Number(receipt?.blockNumber || 0),
             txHash,
@@ -156,7 +158,9 @@ function createSwapOrchestrator(deps) {
             toSymbol,
             fromAmount: fromAmountText,
             toAmount: toAmountText,
-            usdAmount: scaledBigIntToDecimal(usdRaw8, 8, 2)
+            usdAmount: scaledBigIntToDecimal(usdRaw8, 8, 2),
+            journalQueued: Boolean(recordResult?.journalResult?.queued),
+            journalTxId: String(recordResult?.journalResult?.txId || "")
         };
     }
 
@@ -164,4 +168,3 @@ function createSwapOrchestrator(deps) {
 }
 
 module.exports = { createSwapOrchestrator };
-

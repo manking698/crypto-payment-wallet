@@ -32,6 +32,7 @@ function createCardPaymentService(deps) {
         normalizeSpendPriority,
         buildCardPaymentPriority,
         buildCardDeductionPlan,
+        validateCardPaymentInput,
         getStartOfDay,
         getStartOfMonth,
         shortenMerchantNameAscii,
@@ -41,24 +42,27 @@ function createCardPaymentService(deps) {
     } = deps;
 
     async function processPayment(reqBody) {
-        const paymentCurrency = String(reqBody?.paymentCurrency || "USD").trim().toUpperCase();
-        const paymentAmount = String(reqBody?.paymentAmount || "").trim();
-        const merchantName = String(reqBody?.merchantName || "").trim();
-        const merchantRef = String(reqBody?.merchantRef || "").trim();
-        const country = String(reqBody?.country || "").trim().toUpperCase();
+        const input = typeof validateCardPaymentInput === "function"
+            ? validateCardPaymentInput(reqBody)
+            : null;
+        if (input && !input.ok) {
+            throw createCardPaymentError(400, input.error);
+        }
+        const paymentCurrency = input?.paymentCurrency || String(reqBody?.paymentCurrency || "USD").trim().toUpperCase();
+        const paymentAmount = input?.paymentAmount || String(reqBody?.paymentAmount || "").trim();
+        const merchantName = input?.merchantName || String(reqBody?.merchantName || "").trim();
+        const merchantRef = input?.merchantRef || String(reqBody?.merchantRef || "").trim();
+        const country = input?.country || String(reqBody?.country || "").trim().toUpperCase();
         const chainId = 11155111;
 
-        if (!/^\d+(\.\d+)?$/.test(paymentAmount)) {
-            throw createCardPaymentError(400, "invalid payment amount");
-        }
-        const paymentAmountRaw8 = decimalToScaledBigInt(paymentAmount, 8);
+        const paymentAmountRaw8 = input?.paymentAmountRaw8 ?? decimalToScaledBigInt(paymentAmount, 8);
         if (paymentAmountRaw8 <= 0n) {
             throw createCardPaymentError(400, "payment amount must be greater than zero");
         }
-        if (!FX_SUPPORTED_CURRENCIES.includes(paymentCurrency)) {
+        if (!input && !FX_SUPPORTED_CURRENCIES.includes(paymentCurrency)) {
             throw createCardPaymentError(400, "unsupported payment currency");
         }
-        if (!merchantName) {
+        if (!input && !merchantName) {
             throw createCardPaymentError(400, "merchant name is required");
         }
 
@@ -133,16 +137,27 @@ function createCardPaymentService(deps) {
 
         const startOfDay = getStartOfDay(new Date());
         const startOfMonth = getStartOfMonth(new Date());
-        const [dailyPayments, monthlyPayments] = await Promise.all([
+        const [dailyPayments, monthlyPayments, vaultDailyPayments, vaultMonthlyPayments] = await Promise.all([
             CardPayment.find({
                 userId: authUser._id,
                 cardId: card._id,
-                status: "completed",
+                status: { $in: ["processing", "completed", "partial_failed"] },
                 createdAt: { $gte: startOfDay }
             }).select({ usdAmount: 1 }).lean(),
             CardPayment.find({
                 userId: authUser._id,
-                status: "completed",
+                cardId: card._id,
+                status: { $in: ["processing", "completed", "partial_failed"] },
+                createdAt: { $gte: startOfMonth }
+            }).select({ usdAmount: 1 }).lean(),
+            CardPayment.find({
+                vaultAddress,
+                status: { $in: ["processing", "completed", "partial_failed"] },
+                createdAt: { $gte: startOfDay }
+            }).select({ usdAmount: 1 }).lean(),
+            CardPayment.find({
+                vaultAddress,
+                status: { $in: ["processing", "completed", "partial_failed"] },
                 createdAt: { $gte: startOfMonth }
             }).select({ usdAmount: 1 }).lean()
         ]);
@@ -155,6 +170,14 @@ function createCardPaymentService(deps) {
             (sum, item) => sum + decimalToScaledBigInt(String(item.usdAmount || "0"), 8),
             0n
         );
+        const vaultDailySpentUsd8 = vaultDailyPayments.reduce(
+            (sum, item) => sum + decimalToScaledBigInt(String(item.usdAmount || "0"), 8),
+            0n
+        );
+        const vaultMonthlySpentUsd8 = vaultMonthlyPayments.reduce(
+            (sum, item) => sum + decimalToScaledBigInt(String(item.usdAmount || "0"), 8),
+            0n
+        );
 
         const rawPerTxnLimit = Number.isFinite(Number(card.perTransactionLimitUsd))
             ? Number(card.perTransactionLimitUsd)
@@ -162,9 +185,15 @@ function createCardPaymentService(deps) {
         const cardPerTxnLimitUsd8 = decimalToScaledBigInt(String(rawPerTxnLimit), 8);
         const cardDailyLimitUsd8 = decimalToScaledBigInt(String(card.dailyLimitUsd || 0), 8);
         const cardMonthlyLimitUsd8 = decimalToScaledBigInt(
-            String(Number.isFinite(CARD_GLOBAL_MONTHLY_LIMIT_USD) && CARD_GLOBAL_MONTHLY_LIMIT_USD > 0 ? CARD_GLOBAL_MONTHLY_LIMIT_USD : 1000000),
+            String(
+                Number.isFinite(Number(card.monthlyLimitUsd)) && Number(card.monthlyLimitUsd) > 0
+                    ? Number(card.monthlyLimitUsd)
+                    : (Number.isFinite(CARD_GLOBAL_MONTHLY_LIMIT_USD) && CARD_GLOBAL_MONTHLY_LIMIT_USD > 0 ? CARD_GLOBAL_MONTHLY_LIMIT_USD : 1000000)
+            ),
             8
         );
+        const vaultDailyLimitUsd8 = decimalToScaledBigInt(String(card.vaultDailyLimitUsd || 0), 8);
+        const vaultMonthlyLimitUsd8 = decimalToScaledBigInt(String(card.vaultMonthlyLimitUsd || 0), 8);
         if (cardPerTxnLimitUsd8 <= 0n || usdAmountRaw8 > cardPerTxnLimitUsd8) {
             throw createCardPaymentError(400, "card per transaction limit exceeded");
         }
@@ -173,6 +202,12 @@ function createCardPaymentService(deps) {
         }
         if (monthlySpentUsd8 + usdAmountRaw8 > cardMonthlyLimitUsd8) {
             throw createCardPaymentError(400, "card monthly limit exceeded");
+        }
+        if (vaultDailyLimitUsd8 > 0n && vaultDailySpentUsd8 + usdAmountRaw8 > vaultDailyLimitUsd8) {
+            throw createCardPaymentError(400, "vault daily limit exceeded");
+        }
+        if (vaultMonthlyLimitUsd8 > 0n && vaultMonthlySpentUsd8 + usdAmountRaw8 > vaultMonthlyLimitUsd8) {
+            throw createCardPaymentError(400, "vault monthly limit exceeded");
         }
 
         const plannedTokens = plan.map((item) => ({
@@ -214,6 +249,7 @@ function createCardPaymentService(deps) {
         const vaultC = new ethers.Contract(vaultAddress, VAULT_WITHDRAW_ABI, backendSigner);
         const txHashes = [];
         const deductedTokens = [];
+        const journalResults = [];
 
         try {
             for (const item of plan) {
@@ -235,7 +271,7 @@ function createCardPaymentService(deps) {
                     txHash
                 });
 
-                await paymentsService.persistCardPaymentLedgerEntry({
+                const journalResult = await paymentsService.persistCardPaymentLedgerEntry({
                     chainId,
                     blockNumber: Number(receipt?.blockNumber || 0),
                     txHash,
@@ -255,6 +291,7 @@ function createCardPaymentService(deps) {
                     spendPriorityToken,
                     timestamp: new Date()
                 });
+                journalResults.push(journalResult);
             }
 
             await paymentsService.finalizeCardPaymentSuccess({
@@ -278,7 +315,9 @@ function createCardPaymentService(deps) {
                 priorityFlow,
                 plannedTokens,
                 deductedTokens,
-                txHashes
+                txHashes,
+                journalQueued: journalResults.some((item) => Boolean(item?.queued)),
+                journalTxIds: journalResults.map((item) => String(item?.txId || "")).filter(Boolean)
             };
         } catch (chainErr) {
             const plannedRawBySymbol = new Map();
@@ -327,4 +366,3 @@ function createCardPaymentService(deps) {
 }
 
 module.exports = { createCardPaymentService };
-

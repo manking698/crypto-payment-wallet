@@ -8,13 +8,11 @@ import { ProcessingLayer } from "@/components/processing-layer";
 import { TYPO } from "@/lib/typography";
 
 const MERCHANT_OPTIONS = [
-    "VILLAGE GROCER-I-CITY",
-    "KFC MY I-CITY",
-    "SUSHI KING ",
-    "STARBUCKS KLCC",
-    "AEON BIG SHAH ALAM",
-    "GT MART-1025 KAPAR 2",
-    "MEGA DONQUIJOTE TOKYO",
+    "STARBUCKS HONG KONG",
+    "KFC HONG KONG",
+    "SUSHI KING TAIWAN",
+    "VILLAGE GROCER MY",
+    "AEON JAPAN",
 ];
 
 const CURRENCY_OPTIONS = ["MYR", "JPY", "USD", "HKD", "TWD"] as const;

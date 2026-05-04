@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     "localhost",
     "127.0.0.1",
     "192.168.1.8",
+    "46.225.3.119",
     "172.16.230.116",
   ],
   turbopack: {

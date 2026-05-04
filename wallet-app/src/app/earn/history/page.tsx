@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
@@ -33,7 +33,7 @@ function formatMin2Max8Cut(value: string | number) {
     return `${negative ? "-" : ""}${intPart}.${frac}`;
 }
 
-export default function EarnHistoryPage() {
+function EarnHistoryPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { token, hydrated } = useAuthStore();
@@ -168,5 +168,13 @@ export default function EarnHistoryPage() {
                 </section>
             </div>
         </main>
+    );
+}
+
+export default function EarnHistoryPage() {
+    return (
+        <Suspense fallback={null}>
+            <EarnHistoryPageContent />
+        </Suspense>
     );
 }

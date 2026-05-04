@@ -7,7 +7,7 @@
     "monitor": "node monitor.js",
     "script:seed-vaults": "node scripts/seed-test-vaults.js",
     "script:simulate-deposits": "node scripts/simulate-multichain-deposits.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --runInBand"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +26,8 @@
     "p-limit": "^7.3.0"
   },
   "devDependencies": {
+    "jest": "^30.0.5",
+    "supertest": "^7.1.1",
     "nodemon": "^3.1.14"
   }
 }

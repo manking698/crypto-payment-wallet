@@ -200,7 +200,7 @@ function createEarnOrchestrator(deps) {
         if (!r2 || Number(r2.status) !== 1) throw createEarnError(500, "earn subscription failed");
 
         const txHash = String(tx2.hash || "").toLowerCase();
-        await earnService.recordEarnTransaction({
+        const journal = await earnService.recordEarnTransaction({
             txHash,
             direction: "earn-subscribe",
             title: "Earn Subscribe",
@@ -214,7 +214,14 @@ function createEarnOrchestrator(deps) {
             notificationTitle: `${t} subscription completed`,
             notificationMessage: earnService.buildSubscribeMessage(parsed.amount, t)
         });
-        return { success: true, token: t, amount: parsed.amount, txHash };
+        return {
+            success: true,
+            token: t,
+            amount: parsed.amount,
+            txHash,
+            journalQueued: Boolean(journal?.journalResult?.queued),
+            journalTxId: String(journal?.journalResult?.txId || "")
+        };
     }
 
     async function redeem(vaultAddress, token, amount, userId) {
@@ -231,7 +238,7 @@ function createEarnOrchestrator(deps) {
         if (!receipt || Number(receipt.status) !== 1) throw createEarnError(500, "earn redemption failed");
 
         const txHash = String(tx.hash || "").toLowerCase();
-        await earnService.recordEarnTransaction({
+        const journal = await earnService.recordEarnTransaction({
             txHash,
             direction: "earn-redemption",
             title: "Earn Redemption",
@@ -245,7 +252,14 @@ function createEarnOrchestrator(deps) {
             notificationTitle: `${t} redemption completed`,
             notificationMessage: earnService.buildRedeemMessage(parsed.amount, t)
         });
-        return { success: true, token: t, amount: parsed.amount, txHash };
+        return {
+            success: true,
+            token: t,
+            amount: parsed.amount,
+            txHash,
+            journalQueued: Boolean(journal?.journalResult?.queued),
+            journalTxId: String(journal?.journalResult?.txId || "")
+        };
     }
 
     async function claim(vaultAddress, token, userId) {
@@ -274,7 +288,7 @@ function createEarnOrchestrator(deps) {
         }
         const rewardAmount = ethers.formatUnits(rewardRaw, Number(TOKEN_DECIMALS_BY_SYMBOL[t] || 18));
         const txHash = String(tx.hash || "").toLowerCase();
-        await earnService.recordEarnTransaction({
+        const journal = await earnService.recordEarnTransaction({
             txHash,
             direction: "earn-reward",
             title: "Earn Reward Claimed",
@@ -288,11 +302,17 @@ function createEarnOrchestrator(deps) {
             notificationTitle: `${t} reward claimed`,
             notificationMessage: earnService.buildClaimMessage(rewardAmount, t)
         });
-        return { success: true, token: t, amount: rewardAmount, txHash };
+        return {
+            success: true,
+            token: t,
+            amount: rewardAmount,
+            txHash,
+            journalQueued: Boolean(journal?.journalResult?.queued),
+            journalTxId: String(journal?.journalResult?.txId || "")
+        };
     }
 
     return { getSummary, getHistory, subscribe, redeem, claim };
 }
 
 module.exports = { createEarnOrchestrator };
-

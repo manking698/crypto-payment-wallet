@@ -53,11 +53,11 @@ function formatTokenAmount(value: string | number, token: EarnTokenSymbol) {
 
 function toScaledInt(value: string, decimals: number): bigint {
     const text = String(value || "0").trim();
-    if (!text) return 0n;
+    if (!text) return BigInt(0);
     const [intPartRaw, fracRaw = ""] = text.split(".");
     const intPart = (intPartRaw || "0").replace(/[^\d]/g, "") || "0";
     const frac = fracRaw.replace(/[^\d]/g, "").padEnd(decimals, "0").slice(0, decimals);
-    return BigInt(intPart) * (10n ** BigInt(decimals)) + BigInt(frac || "0");
+    return BigInt(intPart) * (BigInt(10) ** BigInt(decimals)) + BigInt(frac || "0");
 }
 
 function truncateDown(value: string | number, decimals: number) {
@@ -204,7 +204,7 @@ export default function EarnSubscribePage() {
         }
         const redeemAmount = amount || defaultRedeemAmount;
         if (!redeemAmount) return;
-        if (toScaledInt(redeemAmount, maxDecimals) <= 0n) return;
+        if (toScaledInt(redeemAmount, maxDecimals) <= BigInt(0)) return;
         if (amount && redeemError) return;
         setConfirmSheet({ action, amount: redeemAmount });
     };
@@ -301,13 +301,13 @@ export default function EarnSubscribePage() {
                     {activeSubscribed ? (
                         <button
                             type="button"
-                            disabled={(subscribedScaled <= 0n) || (Boolean(amount) && Boolean(redeemError)) || redeemMutation.isPending}
+                            disabled={(subscribedScaled <= BigInt(0)) || (Boolean(amount) && Boolean(redeemError)) || redeemMutation.isPending}
                             onClick={() => {
                                 const redeemAmount = amount || defaultRedeemAmount;
-                                if (!redeemAmount || toScaledInt(redeemAmount, maxDecimals) <= 0n) return;
+                                if (!redeemAmount || toScaledInt(redeemAmount, maxDecimals) <= BigInt(0)) return;
                                 openConfirm("redeem");
                             }}
-                            className={`btn-theme-secondary h-10 ${(subscribedScaled <= 0n) || (Boolean(amount) && Boolean(redeemError)) || redeemMutation.isPending ? "ui-state-disabled" : ""}`}
+                            className={`btn-theme-secondary h-10 ${(subscribedScaled <= BigInt(0)) || (Boolean(amount) && Boolean(redeemError)) || redeemMutation.isPending ? "ui-state-disabled" : ""}`}
                         >
                             {redeemMutation.isPending ? "Processing..." : "Redeem"}
                         </button>

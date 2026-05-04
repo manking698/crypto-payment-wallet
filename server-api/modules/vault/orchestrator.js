@@ -87,7 +87,7 @@ function createVaultOrchestrator(deps) {
         const tx = await vaultC.withdrawToken(tokenAddress, toAddress, required);
         const receipt = await tx.wait();
 
-        await persistLedgerTransaction({
+        const journalResult = await persistLedgerTransaction({
             chainId,
             blockNumber: Number(receipt?.blockNumber || 0),
             txHash: String(tx.hash || "").toLowerCase(),
@@ -102,7 +102,13 @@ function createVaultOrchestrator(deps) {
             timestamp: new Date()
         });
 
-        return { success: true, txHash: tx.hash, message: "withdraw done" };
+        return {
+            success: true,
+            txHash: tx.hash,
+            message: "withdraw done",
+            journalQueued: Boolean(journalResult?.queued),
+            journalTxId: String(journalResult?.txId || "")
+        };
     }
 
     return {
@@ -112,4 +118,3 @@ function createVaultOrchestrator(deps) {
 }
 
 module.exports = { createVaultOrchestrator };
-

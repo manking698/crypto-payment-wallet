@@ -9,25 +9,14 @@ import { executeSwap, getDashboardSummary, getSwapQuote } from "@/lib/api";
 import { ProcessingLayer } from "@/components/processing-layer";
 import { TYPO } from "@/lib/typography";
 import { useAuthStore } from "@/store/auth-store";
+import { sanitizeDecimalInput, WALLET_TOKEN_OPTIONS, type WalletTokenKey } from "@/lib/domain-rules";
 
-type TokenKey = "USDT" | "USDC" | "WETH";
-
-const TOKEN_LIST: Array<{ key: TokenKey; label: string; iconUrl: string; decimals: number }> = [
-    { key: "USDT", label: "USDT", iconUrl: "/icons/usdt.png", decimals: 6 },
-    { key: "USDC", label: "USDC", iconUrl: "/icons/usdc.png", decimals: 6 },
-    { key: "WETH", label: "WETH", iconUrl: "/icons/weth-large.png", decimals: 18 }
-];
+type TokenKey = WalletTokenKey;
+const TOKEN_LIST = WALLET_TOKEN_OPTIONS;
 
 function emitToast(message: string, tone: "success" | "error" = "success", durationMs = 5000) {
     if (typeof window === "undefined") return;
     window.dispatchEvent(new CustomEvent("app:toast", { detail: { message, tone, durationMs } }));
-}
-
-function sanitizeAmountInput(value: string) {
-    const cleaned = String(value || "").replace(/[^\d.]/g, "");
-    const parts = cleaned.split(".");
-    if (parts.length <= 1) return cleaned;
-    return `${parts[0]}.${parts.slice(1).join("")}`;
 }
 
 function normalizeSymbol(value: unknown) {
@@ -165,7 +154,7 @@ export default function ConvertPage() {
                         <div className="mt-2 flex items-center justify-between gap-3">
                             <input
                                 value={amount}
-                                onChange={(event) => setAmount(sanitizeAmountInput(event.target.value))}
+                                onChange={(event) => setAmount(sanitizeDecimalInput(event.target.value, fromConfig?.decimals))}
                                 inputMode="decimal"
                                 placeholder="0"
                                 className="w-full bg-transparent text-[2.3rem] font-medium leading-none text-slate-900 outline-none"

@@ -2,13 +2,14 @@
 
 function createEarnService(input) {
     const {
+        persistLedgerTransaction,
         Transaction,
         createNotification,
         formatDisplayAmount
     } = input || {};
 
-    if (!Transaction || !createNotification || !formatDisplayAmount) {
-        throw new Error("createEarnService requires Transaction, createNotification, formatDisplayAmount");
+    if (!persistLedgerTransaction || !Transaction || !createNotification || !formatDisplayAmount) {
+        throw new Error("createEarnService requires persistLedgerTransaction, Transaction, createNotification, formatDisplayAmount");
     }
 
     async function recordEarnTransaction(payload) {
@@ -27,7 +28,7 @@ function createEarnService(input) {
             notificationMessage
         } = payload;
 
-        const txDoc = await Transaction.create({
+        const journalResult = await persistLedgerTransaction({
             txId: `${txHash}:${direction}`,
             chainId: 11155111,
             txHash,
@@ -45,15 +46,21 @@ function createEarnService(input) {
             timestamp: new Date()
         });
 
+        const txDoc = await Transaction.findOne({
+            txHash: String(txHash || "").toLowerCase(),
+            direction,
+            tokenSymbol: String(token || "").toUpperCase()
+        }).select({ _id: 1 }).lean();
+
         await createNotification({
             userId,
             type: "transaction",
             title: notificationTitle,
             message: notificationMessage,
-            relatedTransactionId: txDoc._id
+            relatedTransactionId: txDoc?._id || null
         });
 
-        return txDoc;
+        return { txDoc, journalResult };
     }
 
     function buildSubscribeMessage(amount, token) {
@@ -77,4 +84,3 @@ function createEarnService(input) {
 module.exports = {
     createEarnService
 };
-

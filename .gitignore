@@ -36,5 +36,11 @@ Thumbs.db
 **/.deps/
 **/.cache/
 
-# docs (per request)
+# Ignore all markdown files in subfolders
 **/*.md
+
+# Allow root markdown files
+!/*.md
+
+# others
+commit.bat
