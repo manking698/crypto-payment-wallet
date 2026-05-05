@@ -18,6 +18,7 @@ function createSwapService(input) {
             vaultAddress,
             fromSymbol,
             toSymbol,
+            fromAmountInputText,
             fromAmountText,
             toAmountText,
             timestamp,
@@ -57,7 +58,7 @@ function createSwapService(input) {
             userId,
             type: "transaction",
             title: "Convert completed",
-            message: `${fromAmountText} ${fromSymbol} to ${toAmountText} ${toSymbol}`,
+            message: `${String(fromAmountInputText || fromAmountText)} ${fromSymbol} to ${toAmountText} ${toSymbol}`,
             relatedTransactionId: swapTx?._id || null
         });
 

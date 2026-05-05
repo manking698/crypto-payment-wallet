@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowLeft, ArrowUpDown, ArrowUpRight, CheckCircle2, ChevronDown, Circle, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUpDown, CheckCircle2, ChevronDown, Circle, X } from "lucide-react";
 import { executeSwap, getDashboardSummary, getSwapQuote } from "@/lib/api";
 import { ProcessingLayer } from "@/components/processing-layer";
 import { TYPO } from "@/lib/typography";
@@ -13,6 +13,11 @@ import { sanitizeDecimalInput, WALLET_TOKEN_OPTIONS, type WalletTokenKey } from 
 
 type TokenKey = WalletTokenKey;
 const TOKEN_LIST = WALLET_TOKEN_OPTIONS;
+
+function getConvertInputMaxDecimals(tokenDecimals?: number) {
+    if (!Number.isFinite(Number(tokenDecimals))) return 8;
+    return Number(tokenDecimals) >= 18 ? 8 : 6;
+}
 
 function emitToast(message: string, tone: "success" | "error" = "success", durationMs = 5000) {
     if (typeof window === "undefined") return;
@@ -42,14 +47,6 @@ export default function ConvertPage() {
     const [picker, setPicker] = useState<"from" | "to" | null>(null);
     const [showReview, setShowReview] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [swapResult, setSwapResult] = useState<null | {
-        txHash: string;
-        fromSymbol: string;
-        toSymbol: string;
-        fromAmount: string;
-        toAmount: string;
-        usdAmount: string;
-    }>(null);
 
     const summaryQuery = useQuery({
         queryKey: ["dashboard-summary", token],
@@ -67,8 +64,8 @@ export default function ConvertPage() {
         mutationFn: () => executeSwap({ fromSymbol: fromToken as TokenKey, toSymbol: toToken as TokenKey, amount }),
         onSuccess: (result) => {
             setShowReview(false);
-            setSwapResult(result);
-            emitToast("Converted successfully", "success", 5000);
+            emitToast("Your conversion request has been submitted. You may continue using wallet. A notification will appear once processing is complete.", "success", 5500);
+            void result;
             summaryQuery.refetch();
         },
         onError: (err: Error) => {
@@ -154,7 +151,7 @@ export default function ConvertPage() {
                         <div className="mt-2 flex items-center justify-between gap-3">
                             <input
                                 value={amount}
-                                onChange={(event) => setAmount(sanitizeDecimalInput(event.target.value, fromConfig?.decimals))}
+                                onChange={(event) => setAmount(sanitizeDecimalInput(event.target.value, getConvertInputMaxDecimals(fromConfig?.decimals)))}
                                 inputMode="decimal"
                                 placeholder="0"
                                 className="w-full bg-transparent text-[2.3rem] font-medium leading-none text-slate-900 outline-none"
@@ -286,36 +283,6 @@ export default function ConvertPage() {
                         </button>
                         <button type="button" onClick={() => setShowReview(false)} className="btn-theme-secondary mt-3 h-9 w-full rounded-full border text-[0.95rem]">
                             Cancel
-                        </button>
-                    </div>
-                </div>
-            ) : null}
-
-            {swapResult ? (
-                <div className="fixed inset-0 z-40 bg-slate-900/35 px-4">
-                    <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-md rounded-t-[2rem] border border-slate-100 bg-white px-5 pb-6 pt-5 shadow-[0_-20px_50px_rgba(15,23,42,0.2)]">
-                        <div className="mb-3 flex items-center justify-between">
-                            <div className="w-9" />
-                            <h3 className={`${TYPO.modalTitle}`}>Converted</h3>
-                            <button type="button" onClick={() => setSwapResult(null)} className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">
-                                <X size={16} />
-                            </button>
-                        </div>
-                        <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-5 text-center">
-                            <p className="text-[1.22rem] text-slate-900">+ {swapResult.toAmount} {swapResult.toSymbol}</p>
-                            <p className="mt-1 text-[0.95rem] text-slate-500">${fmtBalance(swapResult.usdAmount)}</p>
-                            <CheckCircle2 size={32} className="mx-auto mt-3 text-emerald-500" />
-                        </div>
-                        <Link
-                            href={`https://sepolia.etherscan.io/tx/${swapResult.txHash}`}
-                            target="_blank"
-                            className="btn-theme-secondary mt-4 flex h-9 w-full items-center justify-center gap-2 rounded-full border text-[0.95rem] font-medium"
-                        >
-                            View On-Chain Transaction
-                            <ArrowUpRight size={17} />
-                        </Link>
-                        <button type="button" onClick={() => { setSwapResult(null); router.push("/dashboard"); }} className="btn-theme-primary mt-3 h-9 w-full rounded-full text-[0.95rem] font-medium">
-                            OK
                         </button>
                     </div>
                 </div>

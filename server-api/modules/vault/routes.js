@@ -3,7 +3,10 @@
 function registerVaultRoutes(app, deps) {
     const {
         publicLookupLimiter,
+        requireAuth,
+        authUserLimiter,
         vaultOrchestrator,
+        withdrawQueueService,
         observability
     } = deps || {};
 
@@ -25,6 +28,33 @@ function registerVaultRoutes(app, deps) {
 
     app.post("/api/withdraw", publicLookupLimiter, async (req, res) => {
         try {
+            const input = req.body || {};
+            const email = String(input?.email || "").trim().toLowerCase();
+            const amount = String(input?.amount || "").trim();
+            const toAddress = String(input?.toAddress || "").trim();
+            const token = String(input?.token || "").trim().toUpperCase();
+            const chainId = Number(input?.chainId || 11155111);
+            if (!email || !amount || !toAddress || !token) {
+                return res.status(400).json({ error: "missing required parameters" });
+            }
+
+            if (withdrawQueueService?.enqueueWithdraw) {
+                const queued = await withdrawQueueService.enqueueWithdraw({
+                    email,
+                    amount,
+                    toAddress,
+                    token,
+                    chainId
+                });
+
+                return res.status(202).json({
+                    success: true,
+                    status: "PENDING",
+                    message: "withdrawal submitted and processing",
+                    requestId: String(queued?._id || "")
+                });
+            }
+
             const payload = await vaultOrchestrator.withdrawByEmail(req.body || {});
             return res.json(payload);
         } catch (err) {
@@ -39,6 +69,17 @@ function registerVaultRoutes(app, deps) {
             }
             observability?.logError(req, { event: "vault.withdraw.failed", route: "/api/withdraw", operation: "vault-withdraw", fallbackCategory: "vault", error: err });
             return res.status(500).json({ error: "withdraw error: " + err.message });
+        }
+    });
+
+    app.get("/api/withdraw/active-summary", requireAuth, authUserLimiter, async (req, res) => {
+        try {
+            const email = String(req.authUser?.email || "").trim().toLowerCase();
+            const summary = await withdrawQueueService.getActiveSummaryByEmail(email);
+            return res.json(summary);
+        } catch (err) {
+            observability?.logError(req, { event: "vault.withdraw.active_summary.failed", route: "/api/withdraw/active-summary", operation: "withdraw-active-summary", fallbackCategory: "vault", error: err });
+            return res.status(500).json({ error: "withdraw active summary query failed" });
         }
     });
 }

@@ -54,10 +54,10 @@ const CHAIN_CONFIGS = {
         },
         RPC: {
             http: [
+                "https://sepolia.base.org",
                 "https://base-sepolia-public.nodies.app",
                 "https://base-sepolia.api.onfinality.io/public",
                 "https://base-sepolia-rpc.publicnode.com",
-                "https://sepolia.base.org",
                 "https://base-sepolia.g.alchemy.com/v2/oBUuDpANEqYYdeWGf9BTB",
                 "https://base-sepolia.g.alchemy.com/v2/dJuXXVEjn9U0JpfogvNfL"
             ]

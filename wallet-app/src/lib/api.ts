@@ -140,10 +140,14 @@ export async function withdrawFunds(input: {
     token: string;
     chainId: number;
 }) {
-    return request<{ success: boolean; txHash: string; message: string }>("/api/withdraw", {
+    return request<{ success: boolean; status: "PENDING"; message: string; requestId: string }>("/api/withdraw", {
         method: "POST",
         body: JSON.stringify(input),
     });
+}
+
+export async function getActiveWithdrawSummary() {
+    return request<{ count: number; latestRequestId: string }>("/api/withdraw/active-summary");
 }
 
 export async function updateSpendPriorityToken(input: { token: WalletTokenKey }) {
@@ -297,13 +301,9 @@ export async function executeSwap(input: {
 }) {
     return request<{
         success: boolean;
-        txHash: string;
-        direction: "swap";
-        fromSymbol: string;
-        toSymbol: string;
-        fromAmount: string;
-        toAmount: string;
-        usdAmount: string;
+        status: "PENDING";
+        message: string;
+        requestId: string;
     }>("/api/swap", {
         method: "POST",
         body: JSON.stringify(input),
@@ -346,12 +346,9 @@ export async function claimFaucet(input: {
 }) {
     return request<{
         success: boolean;
-        claimId: string;
-        vaultAddress: string;
-        claimType: string;
-        tokenSymbols: string[];
-        tokenAmount: string;
-        txHashes: string[];
+        status: "PENDING";
+        message: string;
+        requestId: string;
     }>("/api/faucet/claim", {
         method: "POST",
         body: JSON.stringify(input),
@@ -383,9 +380,9 @@ export async function getEarnHistory(input?: {
 export async function subscribeEarn(input: { token: EarnTokenSymbol; amount: string }) {
     return request<{
         success: boolean;
-        token: EarnTokenSymbol;
-        amount: string;
-        txHash: string;
+        status: "PENDING";
+        message: string;
+        requestId: string;
     }>("/api/earn/subscribe", {
         method: "POST",
         body: JSON.stringify(input)
@@ -395,9 +392,9 @@ export async function subscribeEarn(input: { token: EarnTokenSymbol; amount: str
 export async function redeemEarn(input: { token: EarnTokenSymbol; amount: string }) {
     return request<{
         success: boolean;
-        token: EarnTokenSymbol;
-        amount: string;
-        txHash: string;
+        status: "PENDING";
+        message: string;
+        requestId: string;
     }>("/api/earn/redeem", {
         method: "POST",
         body: JSON.stringify(input)
@@ -407,9 +404,9 @@ export async function redeemEarn(input: { token: EarnTokenSymbol; amount: string
 export async function claimEarnReward(input: { token: EarnTokenSymbol }) {
     return request<{
         success: boolean;
-        token: EarnTokenSymbol;
-        amount: string;
-        txHash: string;
+        status: "PENDING";
+        message: string;
+        requestId: string;
     }>("/api/earn/claim", {
         method: "POST",
         body: JSON.stringify(input)

@@ -36,7 +36,6 @@ function formatDateTime(value?: string | null) {
 export default function FaucetPage() {
     const [vaultAddress, setVaultAddress] = useState("");
     const [claimType, setClaimType] = useState<ClaimType>("USDT");
-    const [resultText, setResultText] = useState("");
 
     const normalizedAddress = vaultAddress.trim();
     const canLookup = isEvmAddress(normalizedAddress);
@@ -49,14 +48,10 @@ export default function FaucetPage() {
 
     const claimMutation = useMutation({
         mutationFn: claimFaucet,
-        onMutate: () => {
-            setResultText("");
-        },
-        onSuccess: (result) => {
+        onSuccess: () => {
             statusQuery.refetch();
-            setResultText(`Claim submitted | ${result.tokenSymbols.join(", ")} | ${result.txHashes.length} tx`);
             window.dispatchEvent(new CustomEvent("app:toast", {
-                detail: { message: "Claim submitted successfully", durationMs: 5000 }
+                detail: { message: "Your claim request has been submitted. A notification will appear once processing is complete", durationMs: 5500 }
             }));
         },
         onError: (error: Error) => {
@@ -125,12 +120,6 @@ export default function FaucetPage() {
                             <p>Claim completed for today</p>
                             <p>Please claim again after {formatDateTime(statusQuery.data.nextClaimAt)}</p>
                         </div>
-                    ) : null}
-
-                    {resultText ? (
-                        <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.9rem] text-emerald-700">
-                            {resultText}
-                        </p>
                     ) : null}
 
                     <button

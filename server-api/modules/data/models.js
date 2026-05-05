@@ -125,6 +125,23 @@ function registerModels(mongoose) {
     }, { strict: false });
     ledgerOutboxSchema.index({ status: 1, nextRetryAt: 1, createdAt: 1 });
 
+    const jobQueueSchema = new mongoose.Schema({
+        jobType: { type: String, required: true, index: true },
+        status: { type: String, enum: ["PENDING", "PROCESSING", "DONE", "FAILED"], default: "PENDING", index: true },
+        payload: { type: mongoose.Schema.Types.Mixed, required: true },
+        result: { type: mongoose.Schema.Types.Mixed, default: null },
+        error: { type: String, default: "" },
+        retryCount: { type: Number, default: 0 },
+        maxRetry: { type: Number, default: 3 },
+        nextRunAt: { type: Date, default: Date.now, index: true },
+        lockedAt: { type: Date, default: null, index: true },
+        lockOwner: { type: String, default: "", index: true },
+        idempotencyKey: { type: String, default: "", index: true },
+        createdAt: { type: Date, default: Date.now, index: true },
+        updatedAt: { type: Date, default: Date.now }
+    }, { strict: false });
+    jobQueueSchema.index({ jobType: 1, status: 1, nextRunAt: 1, createdAt: 1 });
+
     return {
         Transaction: mongoose.models.Transaction || mongoose.model("Transaction", transactionSchema),
         User: mongoose.models.User || mongoose.model("User", userSchema),
@@ -133,7 +150,8 @@ function registerModels(mongoose) {
         CardPayment: mongoose.models.CardPayment || mongoose.model("CardPayment", cardPaymentSchema),
         Notification: mongoose.models.Notification || mongoose.model("Notification", notificationSchema),
         FaucetClaim: mongoose.models.FaucetClaim || mongoose.model("FaucetClaim", faucetClaimSchema),
-        LedgerOutbox: mongoose.models.LedgerOutbox || mongoose.model("LedgerOutbox", ledgerOutboxSchema)
+        LedgerOutbox: mongoose.models.LedgerOutbox || mongoose.model("LedgerOutbox", ledgerOutboxSchema),
+        JobQueue: mongoose.models.JobQueue || mongoose.model("JobQueue", jobQueueSchema)
     };
 }
 

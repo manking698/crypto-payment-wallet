@@ -53,12 +53,12 @@ export default function MainMenuPage() {
                 <section className="mt-7 overflow-hidden rounded-[1.5rem] border border-[#dce4f5] bg-white shadow-[var(--shadow)]">
                     <Link href="/settings" className="flex w-full items-center gap-3 border-b border-[#e7edf8] px-4 py-4 text-left">
                         <Settings className="h-5 w-5 text-slate-700" />
-                        <span className="flex-1 text-[1.1rem] text-slate-900">Settings</span>
+                        <span className="flex-1 text-[0.90rem] text-slate-900">Settings</span>
                         <ChevronRight className="h-5 w-5 text-slate-400" />
                     </Link>
                     <Link href="/support" className="flex w-full items-center gap-3 px-4 py-4 text-left">
                         <LifeBuoy className="h-5 w-5 text-slate-700" />
-                        <span className="flex-1 text-[1.1rem] text-slate-900">Support</span>
+                        <span className="flex-1 text-[0.90rem] text-slate-900">Support</span>
                         <ChevronRight className="h-5 w-5 text-slate-400" />
                     </Link>
                 </section>

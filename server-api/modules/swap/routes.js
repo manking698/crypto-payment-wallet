@@ -5,6 +5,7 @@ function registerSwapRoutes(app, deps) {
         requireAuth,
         authUserLimiter,
         swapOrchestrator,
+        swapQueueService,
         observability
     } = deps || {};
 
@@ -28,7 +29,29 @@ function registerSwapRoutes(app, deps) {
     app.post("/api/swap", requireAuth, authUserLimiter, async (req, res) => {
         try {
             const vaultAddress = String(req.authVault?.vaultAddress || "").trim().toLowerCase();
-            const payload = await swapOrchestrator.execute(req.body || {}, vaultAddress, req.authUser._id);
+            const reqBody = req.body || {};
+            const fromSymbol = String(reqBody?.fromSymbol || "").trim().toUpperCase();
+            const toSymbol = String(reqBody?.toSymbol || "").trim().toUpperCase();
+            const amount = String(reqBody?.amount || "").trim();
+            if (!fromSymbol || !toSymbol || !amount) {
+                return res.status(400).json({ error: "missing required parameters" });
+            }
+
+            if (swapQueueService?.enqueueSwap) {
+                const queued = await swapQueueService.enqueueSwap({
+                    reqBody,
+                    vaultAddress,
+                    userId: req.authUser._id
+                });
+                return res.status(202).json({
+                    success: true,
+                    status: "PENDING",
+                    message: "conversion submitted and processing",
+                    requestId: String(queued?._id || "")
+                });
+            }
+
+            const payload = await swapOrchestrator.execute(reqBody, vaultAddress, req.authUser._id);
             return res.json(payload);
         } catch (err) {
             if (Number.isInteger(err?.status) && err.status >= 400 && err.status < 600) {

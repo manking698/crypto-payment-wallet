@@ -81,6 +81,11 @@ function sanitizeDecimalInput(value: string, decimals: number) {
     return `${intPart}.${fracPart.slice(0, Math.max(0, decimals))}`;
 }
 
+function getMaxWithdrawInputDecimals(token: TokenOption | null) {
+    if (!token) return 8;
+    return token.decimals >= 18 ? 8 : 6;
+}
+
 function toScaledBigInt(value: string, decimals: number) {
     const normalized = String(value || "").trim();
     if (!normalized) return BigInt(0);
@@ -124,9 +129,8 @@ function NetworkModal(props: {
                                     props.onSelect(network);
                                     props.onClose();
                                 }}
-                                className={`flex w-full items-center justify-between rounded-xl border px-3 py-3 ${
-                                    active ? "ui-state-selected" : "ui-state-unselected"
-                                }`}
+                                className={`flex w-full items-center justify-between rounded-xl border px-3 py-3 ${active ? "ui-state-selected" : "ui-state-unselected"
+                                    }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold text-white ${network.iconBg}`}>
@@ -184,9 +188,8 @@ function TokenModal(props: {
                                         props.onSelect(token);
                                         props.onClose();
                                     }}
-                                    className={`flex w-full items-center justify-between rounded-xl border px-3 py-3 ${
-                                        active ? "ui-state-selected" : "ui-state-unselected"
-                                    }`}
+                                    className={`flex w-full items-center justify-between rounded-xl border px-3 py-3 ${active ? "ui-state-selected" : "ui-state-unselected"
+                                        }`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-slate-100 bg-white">
@@ -317,9 +320,10 @@ export default function SendWalletPage() {
         return 30;
     }, [amountDigits]);
     const amountScale = selectedToken?.decimals ?? 18;
+    const inputMaxDecimals = getMaxWithdrawInputDecimals(selectedToken);
     const fractionPart = amountRaw.includes(".") ? amountRaw.split(".")[1] || "" : "";
     const hasValidAmountFormat = /^\d+(\.\d+)?$/.test(amountRaw);
-    const withinTokenDecimals = fractionPart.length <= amountScale;
+    const withinTokenDecimals = fractionPart.length <= inputMaxDecimals;
     const amountScaled = toScaledBigInt(amountRaw || "0", amountScale);
     const balanceScaled = toScaledBigInt(truncateNoRound(selectedAssetBalance, amountScale), amountScale);
     const hasPositiveAmount = amountScaled > BigInt(0);
@@ -339,18 +343,13 @@ export default function SendWalletPage() {
 
     const withdrawMutation = useMutation({
         mutationFn: withdrawFunds,
-        onSuccess: (result) => {
-            setNotice({
-                status: "success",
-                message: "Transaction submitted",
-                txHash: result.txHash,
-                chainId: selectedNetwork.chainId
-            });
+        onSuccess: (_result) => {
+            setNotice(null);
             window.dispatchEvent(new CustomEvent("app:toast", {
                 detail: {
-                    message: "Completed. Click bottom link to view blockchain data",
+                    message: "Your withdrawal request has been submitted. You may continue using wallet. A notification will appear once processing is complete.",
                     tone: "success",
-                    durationMs: 2800
+                    durationMs: 5500
                 }
             }));
             setAmount("");
@@ -513,8 +512,7 @@ export default function SendWalletPage() {
                                 <input
                                     value={amount}
                                     onChange={(e) => {
-                                        const decimals = selectedToken?.decimals ?? 18;
-                                        setAmount(sanitizeDecimalInput(e.target.value, decimals));
+                                        setAmount(sanitizeDecimalInput(e.target.value, inputMaxDecimals));
                                     }}
                                     inputMode="decimal"
                                     placeholder="0"
@@ -524,9 +522,8 @@ export default function SendWalletPage() {
                                 <button
                                     type="button"
                                     onClick={() => setTokenOpen(true)}
-                                    className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 ${
-                                        selectedToken ? "border border-slate-200 bg-white" : "bg-slate-100 text-slate-500"
-                                    }`}
+                                    className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 ${selectedToken ? "border border-slate-200 bg-white" : "bg-slate-100 text-slate-500"
+                                        }`}
                                 >
                                     {selectedToken ? (
                                         <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-slate-100 bg-white">
@@ -588,11 +585,10 @@ export default function SendWalletPage() {
                     ) : null}
 
                     {notice ? (
-                        <div className={`mt-4 rounded-xl px-3 py-2 text-[0.92rem] ${
-                            notice.status === "success"
-                                ? "border border-[#bcd1ff] bg-[#f6f9ff] text-[#1e3a8a] shadow-[0_10px_24px_rgba(59,114,223,0.12)]"
-                                : "border border-red-200 bg-red-50 text-red-700"
-                        }`}>
+                        <div className={`mt-4 rounded-xl px-3 py-2 text-[0.92rem] ${notice.status === "success"
+                            ? "border border-[#bcd1ff] bg-[#f6f9ff] text-[#1e3a8a] shadow-[0_10px_24px_rgba(59,114,223,0.12)]"
+                            : "border border-red-200 bg-red-50 text-red-700"
+                            }`}>
                             <p>{notice.message}</p>
                             {notice.status === "success" && notice.txHash ? (
                                 <div className="mt-1 flex items-center justify-between gap-2">

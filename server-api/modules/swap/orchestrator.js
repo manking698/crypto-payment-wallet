@@ -27,10 +27,26 @@ function createSwapOrchestrator(deps) {
         swapService
     } = deps;
 
+    function getSwapInputMaxDecimals(fromSymbol, fromDecimals) {
+        if (String(fromSymbol || "").toUpperCase() === "WETH") return 8;
+        return Number(fromDecimals || 0) >= 18 ? 8 : 6;
+    }
+
+    function assertSwapInputDecimals(amountText, fromSymbol, fromDecimals) {
+        const text = String(amountText || "").trim();
+        if (!/^\d+(\.\d+)?$/.test(text)) throw createSwapError(400, "invalid amount");
+        const fraction = text.includes(".") ? (text.split(".")[1] || "") : "";
+        const maxInputDecimals = getSwapInputMaxDecimals(fromSymbol, fromDecimals);
+        if (fraction.length > maxInputDecimals) {
+            throw createSwapError(400, `max ${maxInputDecimals} decimals allowed`);
+        }
+    }
+
     function parseSwapRequest(reqBody) {
         if (typeof validateSwapInput === "function") {
             const parsed = validateSwapInput(reqBody);
             if (!parsed.ok) throw createSwapError(400, parsed.error);
+            assertSwapInputDecimals(parsed.amount, parsed.fromSymbol, parsed.fromDecimals);
             return parsed;
         }
         const fromSymbol = normalizeSwapSymbol(reqBody?.fromSymbol);
@@ -43,6 +59,7 @@ function createSwapOrchestrator(deps) {
 
         const fromDecimals = TOKEN_DECIMALS_BY_SYMBOL[fromSymbol];
         const toDecimals = TOKEN_DECIMALS_BY_SYMBOL[toSymbol];
+        assertSwapInputDecimals(amount, fromSymbol, fromDecimals);
         const fromAmountRaw = decimalToScaledBigInt(amount, fromDecimals);
         if (fromAmountRaw <= 0n) throw createSwapError(400, "amount must be greater than zero");
         return { fromSymbol, toSymbol, amount, fromAmountRaw, fromDecimals, toDecimals };
@@ -84,7 +101,7 @@ function createSwapOrchestrator(deps) {
         const chainId = 11155111;
 
         if (!vaultAddress) throw createSwapError(400, "missing vault address");
-        const { fromSymbol, toSymbol, fromAmountRaw, fromDecimals, toDecimals } = parseSwapRequest(reqBody);
+        const { fromSymbol, toSymbol, fromAmountRaw, fromDecimals, toDecimals, amount: fromAmountInputText } = parseSwapRequest(reqBody);
 
         const { snapshot: onchainSnapshot } = await getVaultTokenSnapshot(vaultAddress);
         const frozenBySymbol = await getFrozenTokenRawByVault(vaultAddress);
@@ -144,6 +161,7 @@ function createSwapOrchestrator(deps) {
             vaultAddress,
             fromSymbol,
             toSymbol,
+            fromAmountInputText,
             fromAmountText,
             toAmountText,
             timestamp,

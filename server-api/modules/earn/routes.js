@@ -5,6 +5,7 @@ function registerEarnRoutes(app, deps) {
         requireAuth,
         authUserLimiter,
         earnOrchestrator,
+        earnQueueService,
         observability
     } = deps || {};
 
@@ -33,12 +34,24 @@ function registerEarnRoutes(app, deps) {
     app.post("/api/earn/subscribe", requireAuth, authUserLimiter, async (req, res) => {
         try {
             const vaultAddress = String(req.authVault?.vaultAddress || "").trim().toLowerCase();
-            const payload = await earnOrchestrator.subscribe(
-                vaultAddress,
-                req.body?.token,
-                req.body?.amount,
-                req.authUser._id
-            );
+            const token = String(req.body?.token || "").trim().toUpperCase();
+            const amount = String(req.body?.amount || "").trim();
+            if (!token || !amount) return res.status(400).json({ error: "missing required parameters" });
+            if (earnQueueService?.enqueueSubscribe) {
+                const queued = await earnQueueService.enqueueSubscribe({
+                    vaultAddress,
+                    token,
+                    amount,
+                    userId: req.authUser._id
+                });
+                return res.status(202).json({
+                    success: true,
+                    status: "PENDING",
+                    message: "subscribe submitted and processing",
+                    requestId: String(queued?._id || "")
+                });
+            }
+            const payload = await earnOrchestrator.subscribe(vaultAddress, token, amount, req.authUser._id);
             return res.json(payload);
         } catch (err) {
             if (Number.isInteger(err?.status) && err.status >= 400 && err.status < 600) {
@@ -52,12 +65,24 @@ function registerEarnRoutes(app, deps) {
     app.post("/api/earn/redeem", requireAuth, authUserLimiter, async (req, res) => {
         try {
             const vaultAddress = String(req.authVault?.vaultAddress || "").trim().toLowerCase();
-            const payload = await earnOrchestrator.redeem(
-                vaultAddress,
-                req.body?.token,
-                req.body?.amount,
-                req.authUser._id
-            );
+            const token = String(req.body?.token || "").trim().toUpperCase();
+            const amount = String(req.body?.amount || "").trim();
+            if (!token || !amount) return res.status(400).json({ error: "missing required parameters" });
+            if (earnQueueService?.enqueueRedeem) {
+                const queued = await earnQueueService.enqueueRedeem({
+                    vaultAddress,
+                    token,
+                    amount,
+                    userId: req.authUser._id
+                });
+                return res.status(202).json({
+                    success: true,
+                    status: "PENDING",
+                    message: "redeem submitted and processing",
+                    requestId: String(queued?._id || "")
+                });
+            }
+            const payload = await earnOrchestrator.redeem(vaultAddress, token, amount, req.authUser._id);
             return res.json(payload);
         } catch (err) {
             if (Number.isInteger(err?.status) && err.status >= 400 && err.status < 600) {
@@ -71,11 +96,22 @@ function registerEarnRoutes(app, deps) {
     app.post("/api/earn/claim", requireAuth, authUserLimiter, async (req, res) => {
         try {
             const vaultAddress = String(req.authVault?.vaultAddress || "").trim().toLowerCase();
-            const payload = await earnOrchestrator.claim(
-                vaultAddress,
-                req.body?.token,
-                req.authUser._id
-            );
+            const token = String(req.body?.token || "").trim().toUpperCase();
+            if (!token) return res.status(400).json({ error: "missing required parameters" });
+            if (earnQueueService?.enqueueClaim) {
+                const queued = await earnQueueService.enqueueClaim({
+                    vaultAddress,
+                    token,
+                    userId: req.authUser._id
+                });
+                return res.status(202).json({
+                    success: true,
+                    status: "PENDING",
+                    message: "claim submitted and processing",
+                    requestId: String(queued?._id || "")
+                });
+            }
+            const payload = await earnOrchestrator.claim(vaultAddress, token, req.authUser._id);
             return res.json(payload);
         } catch (err) {
             if (Number.isInteger(err?.status) && err.status >= 400 && err.status < 600) {

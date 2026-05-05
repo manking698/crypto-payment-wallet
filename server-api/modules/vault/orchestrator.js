@@ -59,6 +59,7 @@ function createVaultOrchestrator(deps) {
 
         const normalizedToken = String(token).toUpperCase();
         const tokenDecimalsByKey = { USDT: 6, USDC: 6, WETH: 18 };
+        const tokenInputMaxDecimalsByKey = { USDT: 6, USDC: 6, WETH: 8 };
         const tokenAddressByKey = { USDT: TOKENS.USDT, USDC: TOKENS.USDC, WETH: TOKENS.WETH };
         if (!tokenAddressByKey[normalizedToken]) {
             throw createVaultError(400, "unsupported token");
@@ -66,13 +67,22 @@ function createVaultOrchestrator(deps) {
 
         const tokenAddress = tokenAddressByKey[normalizedToken];
         const tokenDecimals = tokenDecimalsByKey[normalizedToken];
+        const amountText = String(amount).trim();
+        if (!/^\d+(\.\d+)?$/.test(amountText)) {
+            throw createVaultError(400, "invalid withdraw amount");
+        }
+        const fraction = amountText.includes(".") ? (amountText.split(".")[1] || "") : "";
+        const maxInputDecimals = Number(tokenInputMaxDecimalsByKey[normalizedToken] || 8);
+        if (fraction.length > maxInputDecimals) {
+            throw createVaultError(400, `max ${maxInputDecimals} decimals allowed for ${normalizedToken}`);
+        }
         const tokenC = new ethers.Contract(tokenAddress, ["function balanceOf(address) view returns (uint256)"], provider);
 
         const balance = await tokenC.balanceOf(vaultAddress);
         const frozenBySymbol = await getFrozenTokenRawByVault(vaultAddress);
         const frozenRaw = BigInt(frozenBySymbol?.[normalizedToken] || 0n);
         const availableBalance = balance > frozenRaw ? balance - frozenRaw : 0n;
-        const required = ethers.parseUnits(String(amount), tokenDecimals);
+        const required = ethers.parseUnits(amountText, tokenDecimals);
         if (availableBalance < required) {
             throw createVaultError(400, `Vault ${normalizedToken} available balance is insufficient`, {
                 token: normalizedToken,
@@ -94,7 +104,7 @@ function createVaultOrchestrator(deps) {
             from: String(vaultAddress || "").toLowerCase(),
             to: String(toAddress || "").toLowerCase(),
             origSender: String(vaultAddress || "").toLowerCase(),
-            amount: String(amount),
+            amount: amountText,
             tokenSymbol: normalizedToken,
             direction: "out",
             type: "withdrawal",
@@ -106,6 +116,8 @@ function createVaultOrchestrator(deps) {
             success: true,
             txHash: tx.hash,
             message: "withdraw done",
+            amount: amountText,
+            token: normalizedToken,
             journalQueued: Boolean(journalResult?.queued),
             journalTxId: String(journalResult?.txId || "")
         };

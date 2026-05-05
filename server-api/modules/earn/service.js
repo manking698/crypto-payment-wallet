@@ -64,13 +64,13 @@ function createEarnService(input) {
     }
 
     function buildSubscribeMessage(amount, token) {
-        return `Subscribed ${formatDisplayAmount(amount)} ${token} to earn`;
+        return `Subscribed ${String(amount)} ${token} to earn`;
     }
     function buildRedeemMessage(amount, token) {
-        return `Redeemed ${formatDisplayAmount(amount)} ${token} from earn`;
+        return `Redeemed ${String(amount)} ${token} from earn`;
     }
     function buildClaimMessage(amount, token) {
-        return `Claimed ${formatDisplayAmount(amount)} ${token} rewards`;
+        return `Claimed ${String(amount)} ${token} rewards`;
     }
 
     return {

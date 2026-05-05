@@ -24,6 +24,8 @@ const { registerEarnRoutes } = require("./modules/earn/routes");
 const { registerSwapRoutes } = require("./modules/swap/routes");
 const { registerVaultRoutes } = require("./modules/vault/routes");
 const { registerFaucetRoutes } = require("./modules/faucet/routes");
+const { createFaucetService } = require("./modules/faucet/service");
+const { createFaucetQueueService } = require("./modules/faucet/queue-service");
 const { registerUserPreferenceRoutes } = require("./modules/user/routes");
 const { registerFxRoutes } = require("./modules/fx/routes");
 const { registerDashboardRoutes } = require("./modules/dashboard/routes");
@@ -33,13 +35,16 @@ const { createSwapService } = require("./modules/swap/service");
 const { createSwapHelpers } = require("./modules/swap/helpers");
 const { createPaymentsService } = require("./modules/payments/service");
 const { createEarnService } = require("./modules/earn/service");
+const { createEarnQueueService } = require("./modules/earn/queue-service");
 const { createEarnHelpers } = require("./modules/earn/helpers");
 const { createTransactionsService } = require("./modules/transactions/service");
 const { createNotificationsService } = require("./modules/notifications/service");
 const { createCardsService } = require("./modules/cards/service");
 const { createCardPaymentService } = require("./modules/cards/payment-service");
 const { createSwapOrchestrator } = require("./modules/swap/orchestrator");
+const { createSwapQueueService } = require("./modules/swap/queue-service");
 const { createVaultOrchestrator } = require("./modules/vault/orchestrator");
+const { createWithdrawQueueService } = require("./modules/vault/withdraw-queue-service");
 const { createUserVaultService } = require("./modules/vault/user-vault-service");
 const { createDashboardService } = require("./modules/dashboard/service");
 const { createDashboardAssetsService } = require("./modules/dashboard/assets-service");
@@ -242,7 +247,8 @@ const {
     CardPayment,
     Notification,
     FaucetClaim,
-    LedgerOutbox
+    LedgerOutbox,
+    JobQueue
 } = registerModels(mongoose);
 
 const provider = new ethers.JsonRpcProvider(CHAIN_CONFIGS.sepolia.RPC.http[0]);
@@ -412,6 +418,12 @@ const swapOrchestrator = createSwapOrchestrator({
     buildSwapQuoteBySnapshot: swapHelpers.buildSwapQuoteBySnapshot,
     swapService
 });
+const swapQueueService = createSwapQueueService({
+    JobQueue,
+    swapOrchestrator,
+    createNotification,
+    logger: appLogger
+});
 const vaultOrchestrator = createVaultOrchestrator({
     ethers,
     provider,
@@ -424,6 +436,13 @@ const vaultOrchestrator = createVaultOrchestrator({
     ensureUserVaultByAddress: userVaultService.ensureUserVaultByAddress,
     getFrozenTokenRawByVault: vaultSnapshotService.getFrozenTokenRawByVault,
     persistLedgerTransaction
+});
+const withdrawQueueService = createWithdrawQueueService({
+    JobQueue,
+    User,
+    vaultOrchestrator,
+    createNotification,
+    logger: appLogger
 });
 const dashboardService = createDashboardService({
     buildDashboardAssets: createDashboardAssetsService({
@@ -459,6 +478,32 @@ const earnOrchestrator = createEarnOrchestrator({
     parseDateEndOfDay,
     transactionsService,
     earnService
+});
+const earnQueueService = createEarnQueueService({
+    JobQueue,
+    earnOrchestrator,
+    createNotification,
+    logger: appLogger
+});
+const faucetService = createFaucetService({
+    normalizeVaultAddressInput,
+    ethers,
+    FaucetClaim,
+    getFaucetTokenList,
+    getLatestUnlockAtForToken,
+    backendPrivateKey,
+    backendSigner,
+    tokens: TOKENS,
+    faucetTokenAmounts: { USDT: "500", USDC: "1000", WETH: "0.15" },
+    tokenDecimals: { USDT: 6, USDC: 6, WETH: 18 },
+    chainId: 11155111
+});
+const faucetQueueService = createFaucetQueueService({
+    JobQueue,
+    faucetService,
+    createNotification,
+    UserVault,
+    logger: appLogger
 });
 
 async function enrichCardPaymentRows(mappedItems) {
@@ -562,6 +607,7 @@ registerEarnRoutes(app, {
     requireAuth,
     authUserLimiter,
     earnOrchestrator,
+    earnQueueService,
     observability: routeObservability
 });
 
@@ -569,12 +615,16 @@ registerSwapRoutes(app, {
     requireAuth,
     authUserLimiter,
     swapOrchestrator,
+    swapQueueService,
     observability: routeObservability
 });
 
 registerVaultRoutes(app, {
     publicLookupLimiter,
+    requireAuth,
+    authUserLimiter,
     vaultOrchestrator,
+    withdrawQueueService,
     observability: routeObservability
 });
 
@@ -583,6 +633,8 @@ registerFaucetRoutes(app, {
     normalizeVaultAddressInput,
     ethers,
     FaucetClaim,
+    faucetService,
+    faucetQueueService,
     getFaucetTokenList,
     getLatestUnlockAtForToken,
     backendPrivateKey,
@@ -631,6 +683,10 @@ mongoose.connection.once("open", async () => {
         await userVaultService.ensureUserVaultIndexes();
         ledgerService.startProcessor({ intervalMs: 5000, batchSize: 30 });
         provisioningService.startProcessor({ intervalMs: 5000, batchSize: 10 });
+        withdrawQueueService.startProcessor({ intervalMs: 5000, batchSize: 5 });
+        swapQueueService.startProcessor({ intervalMs: 5000, batchSize: 5 });
+        earnQueueService.startProcessor({ intervalMs: 5000, batchSize: 5 });
+        faucetQueueService.startProcessor({ intervalMs: 5000, batchSize: 5 });
     } catch (err) {
         appLogger.error("bootstrap.ensure_indexes_failed", { error: err.message });
     }

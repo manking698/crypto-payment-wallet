@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowUpRight, CheckCircle2, History, X } from "lucide-react";
+import { ArrowLeft, History, X } from "lucide-react";
 import { claimEarnReward, getEarnSummary, redeemEarn, subscribeEarn } from "@/lib/api";
 import { ProcessingLayer } from "@/components/processing-layer";
 import type { EarnTokenSymbol } from "@/lib/types";
@@ -82,11 +82,6 @@ export default function EarnSubscribePage() {
         action: "subscribe" | "redeem" | "claim";
         amount?: string;
     }>(null);
-    const [successSheet, setSuccessSheet] = useState<null | {
-        action: "subscribe" | "redeem" | "claim";
-        amount: string;
-        txHash: string;
-    }>(null);
 
     const summaryQuery = useQuery({
         queryKey: ["earn-summary", token],
@@ -134,15 +129,10 @@ export default function EarnSubscribePage() {
 
     const subscribeMutation = useMutation({
         mutationFn: subscribeEarn,
-        onSuccess: (result) => {
-            window.dispatchEvent(new CustomEvent("app:toast", { detail: { message: "Subscribed successfully", durationMs: 5000 } }));
+        onSuccess: () => {
+            window.dispatchEvent(new CustomEvent("app:toast", { detail: { message: "Your subscribe request has been submitted. You may continue using wallet. A notification will appear once processing is complete", durationMs: 5500 } }));
             setAmount("");
-            queryClient.invalidateQueries({ queryKey: ["earn-summary"] });
-            setSuccessSheet({
-                action: "subscribe",
-                amount: String(result.amount || "0"),
-                txHash: String(result.txHash || "")
-            });
+            setConfirmSheet(null);
         },
         onError: (err: Error) => {
             window.dispatchEvent(new CustomEvent("app:toast", { detail: { message: err.message || "Subscribe failed", tone: "error", durationMs: 5000 } }));
@@ -150,15 +140,10 @@ export default function EarnSubscribePage() {
     });
     const redeemMutation = useMutation({
         mutationFn: redeemEarn,
-        onSuccess: (result) => {
-            window.dispatchEvent(new CustomEvent("app:toast", { detail: { message: "Redeemed successfully", durationMs: 5000 } }));
+        onSuccess: () => {
+            window.dispatchEvent(new CustomEvent("app:toast", { detail: { message: "Your redeem request has been submitted. You may continue using wallet. A notification will appear once processing is complete", durationMs: 5500 } }));
             setAmount("");
-            queryClient.invalidateQueries({ queryKey: ["earn-summary"] });
-            setSuccessSheet({
-                action: "redeem",
-                amount: String(result.amount || "0"),
-                txHash: String(result.txHash || "")
-            });
+            setConfirmSheet(null);
         },
         onError: (err: Error) => {
             window.dispatchEvent(new CustomEvent("app:toast", { detail: { message: err.message || "Redemption failed", tone: "error", durationMs: 5000 } }));
@@ -166,21 +151,16 @@ export default function EarnSubscribePage() {
     });
     const claimMutation = useMutation({
         mutationFn: claimEarnReward,
-        onSuccess: (result) => {
-            window.dispatchEvent(new CustomEvent("app:toast", { detail: { message: "Rewards claimed successfully", durationMs: 5000 } }));
-            queryClient.invalidateQueries({ queryKey: ["earn-summary"] });
-            setSuccessSheet({
-                action: "claim",
-                amount: String(result.amount || "0"),
-                txHash: String(result.txHash || "")
-            });
+        onSuccess: () => {
+            window.dispatchEvent(new CustomEvent("app:toast", { detail: { message: "Your claim request has been submitted. You may continue using wallet. A notification will appear once processing is complete", durationMs: 5500 } }));
+            setConfirmSheet(null);
         },
         onError: (err: Error) => {
             const raw = String(err.message || "");
             const normalized = raw.toLowerCase();
             const message = normalized.includes("no rewards") || normalized.includes("execution reverted")
-                ? "no matured rewards yet"
-                : (raw || "Claim failed");
+                ? "No matured reward yet. Please try again later"
+                : (raw || "Claim Result");
             window.dispatchEvent(new CustomEvent("app:toast", { detail: { message, tone: "error", durationMs: 5000 } }));
         }
     });
@@ -218,7 +198,6 @@ export default function EarnSubscribePage() {
         } else {
             claimMutation.mutate({ token: selectedToken });
         }
-        setConfirmSheet(null);
     };
 
     return (
@@ -367,53 +346,6 @@ export default function EarnSubscribePage() {
                                 className="btn-theme-primary h-10"
                             >
                                 Submit
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            ) : null}
-
-            {successSheet ? (
-                <div className="fixed inset-0 z-40 bg-slate-900/35 px-4">
-                    <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-md rounded-t-[2rem] border border-slate-100 bg-white px-5 pb-6 pt-5 shadow-[0_-20px_50px_rgba(15,23,42,0.2)]">
-                        <div className="mb-2 flex items-center justify-between">
-                            <div className="w-9" />
-                            <h3 className={`${TYPO.modalTitle}`}>Completed</h3>
-                            <button
-                                type="button"
-                                onClick={() => setSuccessSheet(null)}
-                                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-                        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-4 text-center">
-                            <CheckCircle2 size={36} className="mx-auto text-emerald-500" />
-                            <p className="mt-2 text-[1rem] font-semibold text-slate-900">
-                                {successSheet.action === "subscribe" ? "Earn Subscribe" : successSheet.action === "redeem" ? "Earn Redemption" : "Earn Claim"}
-                            </p>
-                            <p className="mt-1 text-[0.92rem] text-slate-600">
-                                {formatTokenAmount(successSheet.amount, selectedToken)} {selectedToken}
-                            </p>
-                        </div>
-                        <div className="mt-4 grid grid-cols-1 gap-2">
-                            {successSheet.txHash ? (
-                                <a
-                                    href={`https://sepolia.etherscan.io/tx/${successSheet.txHash}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="btn-theme-secondary flex h-10 items-center justify-center gap-1.5"
-                                >
-                                    View On-Chain Transaction
-                                    <ArrowUpRight size={16} />
-                                </a>
-                            ) : null}
-                            <button
-                                type="button"
-                                onClick={() => setSuccessSheet(null)}
-                                className="btn-theme-primary h-10"
-                            >
-                                OK
                             </button>
                         </div>
                     </div>
