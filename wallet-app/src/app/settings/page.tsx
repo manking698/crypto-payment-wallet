@@ -49,7 +49,7 @@ export default function SettingsPage() {
                         className="flex w-full items-center gap-3 px-4 py-4 text-left"
                     >
                         <KeyRound className="h-5 w-5 text-slate-700" />
-                        <span className="flex-1 text-[1.1rem] text-slate-900">Change password</span>
+                        <span className="flex-1 text-[0.90rem] text-slate-900">Change password</span>
                         <ChevronRight className="h-5 w-5 text-slate-400" />
                     </Link>
                 </section>
