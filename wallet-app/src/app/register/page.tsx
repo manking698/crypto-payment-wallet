@@ -74,7 +74,7 @@ export default function RegisterPage() {
                 detail: {
                     message: "Registration submitted. Please login in a while",
                     tone: "success",
-                    durationMs: 3000
+                    durationMs: 15000
                 }
             }));
             router.replace(`/login?email=${encodeURIComponent(values.email)}`);
