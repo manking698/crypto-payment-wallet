@@ -150,6 +150,7 @@ const hyperlaneQuoteCache = new Map();
 const SUPPORTED_TOKEN_ADDRESSES = getFilterTokenAddresses();
 SUPPORTED_TOKEN_ADDRESSES.push(process.env.HYPERLANE_RECEIVER_ADDRESS.toLowerCase());
 const VAULT_ADDRESS_REFRESH_INTERVAL_MS = 30 * 1000;
+const BLOCK_BATCH_SIZE = 50;
 
 function registerVaultAddress(vaultAddress) {
     const normalizedAddress = String(vaultAddress || "").trim().toLowerCase();
@@ -498,50 +499,37 @@ async function collectErc20Transactions(logs, chainCfg, provider, timestampCache
 // Scan native ETH transfers that are not covered by ERC20 log queries.
 // 扫描 ERC20 日志无法覆盖的原生 ETH 转账。
 async function collectNativeTransactions(provider, chainCfg, blockNumber, blockNumberEnd, logsArray) {
-    const limit = pLimit(BLOCK_FETCH_CONCURRENCY);
-    const tasks = [];
-
-    for (let bn = blockNumber; bn <= blockNumberEnd; bn++) {
-        tasks.push(limit(async () => {
-            const block = await provider.getBlock(bn, true);
-            return {
-                timestamp: block?.timestamp,
-                transactions: block?.prefetchedTransactions || []
-            };
-        }));
-    }
-
     const ti = getTokenInfoByAddress(chainCfg.chainId, "0x");
-    const results = await Promise.all(tasks);
-    const ethTransfers = results.flatMap((result) =>
-        (result.transactions || [])
-            .filter((tx) => tx && tx.value && tx.value > 0 &&
-                (vaultAddresses.has(tx.from?.toLowerCase()) || vaultAddresses.has(tx.to?.toLowerCase())))
-            .map((tx) => ({
-                ...tx,
-                timestamp: new Date(result.timestamp * 1000)
-            }))
-    );
+    for (let bn = blockNumber; bn <= blockNumberEnd; bn++) {
+        const block = await provider.getBlock(bn, true);
+        const timestamp = new Date((block?.timestamp || 0) * 1000);
+        const txs = block?.prefetchedTransactions || [];
 
-    for (const tx of ethTransfers) {
-        const baseTx = buildBaseTransaction({
-            chainId: chainCfg.chainId,
-            chainName: chainCfg.chainName,
-            type: "Native",
-            blockNumber: tx.blockNumber,
-            txHash: tx.hash,
-            logIndex: tx.index,
-            from: tx.from?.toLowerCase(),
-            to: tx.to?.toLowerCase(),
-            amount: ethers.formatUnits(tx.value, ti.token.decimals),
-            token: ti.token.address,
-            tokenKey: ti.tokenKey,
-            tokenSymbol: ti.token.symbol,
-            timestamp: tx.timestamp,
-            origSender: tx.from?.toLowerCase()
-        });
+        for (const tx of txs) {
+            if (!tx || !tx.value || tx.value <= 0) continue;
+            const from = tx.from?.toLowerCase();
+            const to = tx.to?.toLowerCase();
+            if (!vaultAddresses.has(from) && !vaultAddresses.has(to)) continue;
 
-        pushTransactionDirections(logsArray, baseTx);
+            const baseTx = buildBaseTransaction({
+                chainId: chainCfg.chainId,
+                chainName: chainCfg.chainName,
+                type: "Native",
+                blockNumber: tx.blockNumber,
+                txHash: tx.hash,
+                logIndex: tx.index,
+                from,
+                to,
+                amount: ethers.formatUnits(tx.value, ti.token.decimals),
+                token: ti.token.address,
+                tokenKey: ti.tokenKey,
+                tokenSymbol: ti.token.symbol,
+                timestamp,
+                origSender: from
+            });
+
+            pushTransactionDirections(logsArray, baseTx);
+        }
     }
 }
 
@@ -1128,7 +1116,7 @@ async function startMonitor(chainCfg) {
 
             while (lastProcessed < targetBlock) {
                 const startBlock = lastProcessed + 1;
-                const endBlock = Math.min(startBlock + 199, targetBlock);
+                const endBlock = Math.min(startBlock + (BLOCK_BATCH_SIZE - 1), targetBlock);
                 await processBlock(chainCfg, startBlock, endBlock);
                 lastProcessed = endBlock;
                 await setLastProcessedBlock(chainCfg.chainKey, lastProcessed);
