@@ -120,15 +120,26 @@ function registerAuthRoutes(app, deps) {
                 authSecurityService.registerLoginFailure(loginKey);
                 return res.status(401).json({ error: "invalid email or password" });
             }
+            const fallbackAddress = await computeVaultAddress(user.email);
+            let vaultRecord = await userVaultService.ensureUserVault(user, user.defaultChainId || 11155111)
+                || await userVaultService.ensureUserVaultByAddress(user.defaultChainId || 11155111, fallbackAddress);
             const registrationStatus = String(user.registrationStatus || "ACTIVE");
-            if (registrationStatus === "PENDING_VAULT") {
+
+            // Backward compatibility: old accounts may still carry pending/failed status while vault is already ready.
+            if ((registrationStatus === "PENDING_VAULT" || registrationStatus === "FAILED") && vaultRecord?.vaultAddress) {
+                user.registrationStatus = "ACTIVE";
+                user.registrationError = "";
+            }
+
+            const effectiveStatus = String(user.registrationStatus || "ACTIVE");
+            if (effectiveStatus === "PENDING_VAULT") {
                 authSecurityService.clearLoginFailure(loginKey);
                 return res.status(409).json({
                     error: "registration is still processing, please try again shortly",
                     code: "REGISTRATION_IN_PROGRESS"
                 });
             }
-            if (registrationStatus === "FAILED") {
+            if (effectiveStatus === "FAILED") {
                 authSecurityService.clearLoginFailure(loginKey);
                 return res.status(409).json({
                     error: "wallet setup is retrying, please try again shortly",
@@ -139,9 +150,6 @@ function registerAuthRoutes(app, deps) {
             authSecurityService.clearLoginFailure(loginKey);
             user.lastLoginAt = new Date();
             await user.save();
-            const fallbackAddress = await computeVaultAddress(user.email);
-            const vaultRecord = await userVaultService.ensureUserVault(user, user.defaultChainId || 11155111)
-                || await userVaultService.ensureUserVaultByAddress(user.defaultChainId || 11155111, fallbackAddress);
 
             return res.json({
                 token: tokenService.createAuthToken(user),
