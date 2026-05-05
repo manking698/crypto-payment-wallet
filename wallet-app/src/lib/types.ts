@@ -13,6 +13,12 @@ export type AuthResponse = {
     user: UserProfile;
 };
 
+export type RegisterResponse = AuthResponse | {
+    success: true;
+    status: "PENDING_VAULT";
+    message?: string;
+};
+
 export type DashboardTransaction = {
     id?: string;
     paymentId?: string;

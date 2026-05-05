@@ -19,6 +19,12 @@ function registerModels(mongoose) {
         defaultChainId: { type: Number, default: 11155111 },
         spendPriorityToken: { type: String, enum: ["USDT", "USDC", "WETH"], default: "USDT" },
         displayCurrency: { type: String, default: "USD" },
+        registrationStatus: { type: String, enum: ["ACTIVE", "PENDING_VAULT", "FAILED"], default: "PENDING_VAULT", index: true },
+        registrationError: { type: String, default: "" },
+        registrationRetries: { type: Number, default: 0 },
+        registrationRequestedAt: { type: Date, default: Date.now },
+        registrationLastAttemptAt: { type: Date, default: null },
+        registrationCompletedAt: { type: Date, default: null },
         createdAt: { type: Date, default: Date.now },
         lastLoginAt: { type: Date, default: null }
     });
@@ -134,4 +140,3 @@ function registerModels(mongoose) {
 module.exports = {
     registerModels
 };
-

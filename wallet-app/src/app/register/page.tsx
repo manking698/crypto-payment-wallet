@@ -8,7 +8,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, LoaderCircle, UserPlus } from "lucide-react";
 import { registerAccount } from "@/lib/api";
-import { ProcessingLayer } from "@/components/processing-layer";
 import { TYPO } from "@/lib/typography";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -58,15 +57,27 @@ export default function RegisterPage() {
                 email: values.email,
                 password: values.password,
             });
+            if ("token" in result) {
+                window.dispatchEvent(new CustomEvent("app:toast", {
+                    detail: {
+                        message: "Register completed. Redirecting",
+                        tone: "success",
+                        durationMs: 2400
+                    }
+                }));
+                setSession(result.token, result.user);
+                router.replace("/dashboard");
+                return;
+            }
+
             window.dispatchEvent(new CustomEvent("app:toast", {
                 detail: {
-                    message: "Register completed. Redirecting",
+                    message: "Registration submitted. Please login in a while",
                     tone: "success",
-                    durationMs: 2400
+                    durationMs: 3000
                 }
             }));
-            setSession(result.token, result.user);
-            router.replace("/dashboard");
+            router.replace(`/login?email=${encodeURIComponent(values.email)}`);
         } catch (err) {
             window.dispatchEvent(new CustomEvent("app:toast", {
                 detail: {
@@ -175,7 +186,7 @@ export default function RegisterPage() {
                             </button>
                             {isSubmitting ? (
                                 <p className="text-center text-sm text-slate-500">
-                                    Account is setting up. You will be redirected to your account shortly.
+                                    Please wait...
                                 </p>
                             ) : null}
                         </form>
@@ -217,7 +228,6 @@ export default function RegisterPage() {
                     </div>
                 </div>
             </section>
-            <ProcessingLayer open={isSubmitting} text="processing..." zIndexClassName="z-[60]" />
         </main>
     );
 }

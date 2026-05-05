@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,8 +18,9 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginPageContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [showPassword, setShowPassword] = useState(false);
     const setSession = useAuthStore((state) => state.setSession);
     const token = useAuthStore((state) => state.token);
@@ -29,6 +30,7 @@ export default function LoginPage() {
         handleSubmit,
         formState: { errors, isSubmitting },
         setError,
+        setValue,
         watch,
     } = useForm<LoginValues>({
         resolver: zodResolver(loginSchema),
@@ -46,6 +48,12 @@ export default function LoginPage() {
         }
     }, [hydrated, router, token]);
 
+    useEffect(() => {
+        const email = String(searchParams.get("email") || "").trim();
+        if (!email) return;
+        setValue("email", email, { shouldValidate: true, shouldDirty: true });
+    }, [searchParams, setValue]);
+
     const emailInput = watch("email");
     const isEmailFormatValid = z.string().email().safeParse(String(emailInput || "").trim()).success;
 
@@ -55,8 +63,21 @@ export default function LoginPage() {
             setSession(result.token, result.user);
             router.replace("/dashboard");
         } catch (err) {
+            const message = err instanceof Error ? err.message : "Login failed.";
+            if (message.includes("registration is still processing")) {
+                setError("root", {
+                    message: "Wallet setup is still in progress. Please try again shortly.",
+                });
+                return;
+            }
+            if (message.includes("wallet setup is retrying")) {
+                setError("root", {
+                    message: "Wallet setup retrying. Please try again shortly.",
+                });
+                return;
+            }
             setError("root", {
-                message: err instanceof Error ? err.message : "Login failed.",
+                message,
             });
         }
     });
@@ -167,5 +188,13 @@ export default function LoginPage() {
                 </div>
             </section>
         </main>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={null}>
+            <LoginPageContent />
+        </Suspense>
     );
 }

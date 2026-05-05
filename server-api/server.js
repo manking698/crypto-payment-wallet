@@ -11,6 +11,7 @@ const { CHAIN_CONFIGS, getTokenAddressByKey } = require("./config/chainConfig");
 const { buildAppConstants } = require("./config/app-constants");
 const { deployVault } = require("../service/deploy-vault-factory");
 const { createAuthSecurityService } = require("./modules/auth/service");
+const { createProvisioningService } = require("./modules/auth/provisioning-service");
 const { createTokenService } = require("./modules/auth/token-service");
 const { createRequireAuth } = require("./modules/auth/middleware");
 const { createVaultAddressResolver } = require("./modules/auth/vault-address");
@@ -282,6 +283,15 @@ const computeVaultAddress = vaultAddressResolver.computeVaultAddress;
 
 const notificationsService = createNotificationsService({ Notification, mongoose });
 const createNotification = (input) => notificationsService.createNotification(input);
+const provisioningService = createProvisioningService({
+    User,
+    UserVault,
+    deployVault,
+    computeVaultAddress,
+    createNotification,
+    chainId: 11155111,
+    logger: appLogger
+});
 
 const ledgerService = createLedgerService({
     Transaction,
@@ -513,6 +523,7 @@ registerAuthRoutes(app, {
     profileService,
     authSecurityService,
     userVaultService,
+    provisioningService,
     observability: routeObservability
 });
 
@@ -619,6 +630,7 @@ mongoose.connection.once("open", async () => {
     try {
         await userVaultService.ensureUserVaultIndexes();
         ledgerService.startProcessor({ intervalMs: 5000, batchSize: 30 });
+        provisioningService.startProcessor({ intervalMs: 5000, batchSize: 10 });
     } catch (err) {
         appLogger.error("bootstrap.ensure_indexes_failed", { error: err.message });
     }

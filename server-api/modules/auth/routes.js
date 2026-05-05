@@ -15,6 +15,7 @@ function registerAuthRoutes(app, deps) {
         profileService,
         authSecurityService,
         userVaultService,
+        provisioningService,
         observability
     } = deps || {};
 
@@ -35,6 +36,24 @@ function registerAuthRoutes(app, deps) {
         }
 
         try {
+            if (provisioningService) {
+                const passwordHash = await bcrypt.hash(password, 10);
+                const user = await User.create({
+                    email,
+                    passwordHash,
+                    defaultChainId: 11155111,
+                    registrationStatus: "PENDING_VAULT",
+                    registrationRequestedAt: new Date(),
+                    lastLoginAt: null
+                });
+                await provisioningService.enqueueForUser(user._id);
+                return res.status(202).json({
+                    success: true,
+                    status: "PENDING_VAULT",
+                    message: "registration submitted, wallet setup is in progress"
+                });
+            }
+
             const salt = deployVault.getSalt(email);
             const deployResult = await deployVault.deploy(11155111, salt);
             if (!deployResult.result && deployResult.message !== "already deployed") {
@@ -101,6 +120,21 @@ function registerAuthRoutes(app, deps) {
                 authSecurityService.registerLoginFailure(loginKey);
                 return res.status(401).json({ error: "invalid email or password" });
             }
+            const registrationStatus = String(user.registrationStatus || "ACTIVE");
+            if (registrationStatus === "PENDING_VAULT") {
+                authSecurityService.clearLoginFailure(loginKey);
+                return res.status(409).json({
+                    error: "registration is still processing, please try again shortly",
+                    code: "REGISTRATION_IN_PROGRESS"
+                });
+            }
+            if (registrationStatus === "FAILED") {
+                authSecurityService.clearLoginFailure(loginKey);
+                return res.status(409).json({
+                    error: "wallet setup is retrying, please try again shortly",
+                    code: "REGISTRATION_RETRYING"
+                });
+            }
 
             authSecurityService.clearLoginFailure(loginKey);
             user.lastLoginAt = new Date();
@@ -116,6 +150,27 @@ function registerAuthRoutes(app, deps) {
         } catch (err) {
             observability?.logError(req, { event: "auth.login.failed", route: "/api/auth/login", operation: "login", fallbackCategory: "auth", error: err });
             return res.status(500).json({ error: "login failed: " + err.message });
+        }
+    });
+
+    app.post("/api/auth/registration-status", authLimiter, async (req, res) => {
+        const email = String(req.body?.email || "").trim().toLowerCase();
+        if (!email) {
+            return res.status(400).json({ error: "email is required" });
+        }
+        try {
+            const user = await User.findOne({ email }).lean();
+            if (!user) {
+                return res.status(404).json({ error: "account not found" });
+            }
+            const registrationStatus = String(user.registrationStatus || "ACTIVE");
+            return res.json({
+                status: registrationStatus,
+                ready: registrationStatus === "ACTIVE"
+            });
+        } catch (err) {
+            observability?.logError(req, { event: "auth.registration_status.failed", route: "/api/auth/registration-status", operation: "registration-status", fallbackCategory: "auth", error: err });
+            return res.status(500).json({ error: "registration status query failed" });
         }
     });
 

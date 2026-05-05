@@ -6,6 +6,7 @@ import type {
     EarnSummaryResponse,
     EarnTokenSymbol,
     FxLatestResponse,
+    RegisterResponse,
     TransactionHistoryResponse,
     UserCard,
     UserProfile
@@ -55,9 +56,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function registerAccount(input: { email: string; password: string }) {
-    return request<AuthResponse>("/api/auth/register", {
+    return request<RegisterResponse>("/api/auth/register", {
         method: "POST",
         body: JSON.stringify(input),
+    });
+}
+
+export async function getRegistrationStatus(input: { email: string }) {
+    return request<{ status: "ACTIVE" | "PENDING_VAULT" | "FAILED"; ready: boolean }>("/api/auth/registration-status", {
+        method: "POST",
+        body: JSON.stringify(input)
     });
 }
 
