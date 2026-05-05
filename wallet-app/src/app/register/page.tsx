@@ -74,7 +74,7 @@ export default function RegisterPage() {
                 detail: {
                     message: "Registration submitted. Please login in a while",
                     tone: "success",
-                    durationMs: 15000
+                    durationMs: 8000
                 }
             }));
             router.replace(`/login?email=${encodeURIComponent(values.email)}`);
@@ -206,7 +206,7 @@ export default function RegisterPage() {
                             Simple and friendly light UI
                         </span>
                         <div className="space-y-4">
-                    <h1 className={`${TYPO.heroTitleDesktop} text-slate-900`}>
+                            <h1 className={`${TYPO.heroTitleDesktop} text-slate-900`}>
                                 A cleaner wallet flow built around your vault, not around chaos.
                             </h1>
                             <p className="max-w-xl text-lg leading-8 text-slate-600">
