@@ -86,8 +86,8 @@ export default function ChangePasswordPage() {
                     onSubmit={handleSubmit}
                     className="mt-6 rounded-[1.6rem] border border-[#dce4f5] bg-white px-4 py-5 shadow-[var(--shadow)]"
                 >
-                    <label className="mb-2 block text-[1rem] font-semibold text-slate-800">Old password</label>
-                    <div className="mb-4 flex h-14 items-center rounded-[1rem] border border-[#d6e0f4] bg-white px-4">
+                    <label className="mb-2 block text-[0.90rem] font-semibold text-slate-800">Old password</label>
+                    <div className="mb-4 flex h-12 items-center rounded-[1rem] border border-[#d6e0f4] bg-white px-4">
                         <input
                             type={showOld ? "text" : "password"}
                             value={oldPassword}
@@ -101,8 +101,8 @@ export default function ChangePasswordPage() {
                         </button>
                     </div>
 
-                    <label className="mb-2 block text-[1rem] font-semibold text-slate-800">New password</label>
-                    <div className="mb-4 flex h-14 items-center rounded-[1rem] border border-[#d6e0f4] bg-white px-4">
+                    <label className="mb-2 block text-[0.90rem] font-semibold text-slate-800">New password</label>
+                    <div className="mb-4 flex h-12 items-center rounded-[1rem] border border-[#d6e0f4] bg-white px-4">
                         <input
                             type={showNew ? "text" : "password"}
                             value={newPassword}
@@ -116,8 +116,8 @@ export default function ChangePasswordPage() {
                         </button>
                     </div>
 
-                    <label className="mb-2 block text-[1rem] font-semibold text-slate-800">Confirm password</label>
-                    <div className="mb-5 flex h-14 items-center rounded-[1rem] border border-[#d6e0f4] bg-white px-4">
+                    <label className="mb-2 block text-[0.90rem] font-semibold text-slate-800">Confirm password</label>
+                    <div className="mb-5 flex h-12 items-center rounded-[1rem] border border-[#d6e0f4] bg-white px-4">
                         <input
                             type={showConfirm ? "text" : "password"}
                             value={confirmPassword}
