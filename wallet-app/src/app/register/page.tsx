@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, LoaderCircle, UserPlus } from "lucide-react";
+import { Eye, EyeOff, UserPlus } from "lucide-react";
 import { registerAccount } from "@/lib/api";
+import { ProcessingLayer } from "@/components/processing-layer";
 import { TYPO } from "@/lib/typography";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -181,14 +182,8 @@ export default function RegisterPage() {
                                 disabled={isSubmitting || !isValid}
                                 className="btn-theme-primary inline-flex h-9 w-full items-center justify-center gap-2 px-4 text-[0.95rem] font-semibold disabled:cursor-not-allowed disabled:opacity-70"
                             >
-                                {isSubmitting ? <LoaderCircle className="animate-spin" size={18} /> : null}
-                                {isSubmitting ? "Please wait..." : "Register"}
+                                Register
                             </button>
-                            {isSubmitting ? (
-                                <p className="text-center text-sm text-slate-500">
-                                    Please wait...
-                                </p>
-                            ) : null}
                         </form>
 
                         <p className="text-sm text-slate-500">
@@ -228,6 +223,7 @@ export default function RegisterPage() {
                     </div>
                 </div>
             </section>
+            <ProcessingLayer open={isSubmitting} text="processing..." zIndexClassName="z-[80]" />
         </main>
     );
 }
