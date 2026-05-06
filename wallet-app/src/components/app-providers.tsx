@@ -216,7 +216,7 @@ export function AppProviders({ children }: PropsWithChildren) {
         <QueryClientProvider client={queryClient}>
             {children}
             {toastVisible ? (
-                <div className="pointer-events-none fixed inset-0 z-[100] flex items-start justify-center px-4 pt-[15vh]">
+                <div className="pointer-events-none fixed inset-0 z-[100] flex items-start justify-center px-4 pt-[12vh]">
                     <div
                         className={`${isShortToast ? "inline-flex max-w-[92vw] whitespace-nowrap" : "w-full max-w-[92vw] whitespace-normal break-words sm:max-w-md"} rounded-md border border-blue-300/70 bg-blue-500/9 px-4 py-2 text-sm font-medium text-blue-900 shadow-[0_10px_24px_rgba(15,23,42,0.18)] backdrop-blur`}
                     >
