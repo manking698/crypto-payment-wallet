@@ -13,6 +13,7 @@ const MERCHANT_OPTIONS = [
     "SUSHI KING TAIWAN",
     "VILLAGE GROCER MY",
     "AEON JAPAN",
+    "APPLE.COM/BILL"
 ];
 
 const CURRENCY_OPTIONS = ["MYR", "JPY", "USD", "HKD", "TWD"] as const;
