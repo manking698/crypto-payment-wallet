@@ -25,9 +25,17 @@ const CHAIN_CONFIGS = {
         },
         RPC: {
             http: [
-                "https://ethereum-sepolia-rpc.publicnode.com",
+                "https://rpc.sepolia.ethpandaops.io",
+                "https://eth-sepolia-testnet.api.pocket.network",
+                "https://rpc.owlracle.info/sepolia/70d38ce1826c4a60bb2a8e05a6c8b20f",
+                "https://api.zan.top/eth-sepolia",
+                "https://sepolia.rpc.sentio.xyz",
+                "https://ethereum-sepolia-public.nodies.app",
+                "https://eth-sepolia.api.onfinality.io/public",
+                "https://sepolia.gateway.tenderly.co",
+                "https://1rpc.io/sepolia",
                 "https://eth-sepolia.g.alchemy.com/v2/oBUuDpANEqYYdeWGf9BTB",
-                "https://1rpc.io/sepolia"
+                "https://ethereum-sepolia-rpc.publicnode.com"
             ]
         },
         confirmations: 3,
@@ -55,10 +63,10 @@ const CHAIN_CONFIGS = {
         RPC: {
             http: [
                 "https://sepolia.base.org",
+                "https://base-sepolia.g.alchemy.com/v2/oBUuDpANEqYYdeWGf9BTB",
                 "https://base-sepolia-public.nodies.app",
                 "https://base-sepolia.api.onfinality.io/public",
                 "https://base-sepolia-rpc.publicnode.com",
-                "https://base-sepolia.g.alchemy.com/v2/oBUuDpANEqYYdeWGf9BTB",
                 "https://base-sepolia.g.alchemy.com/v2/dJuXXVEjn9U0JpfogvNfL"
             ]
         },
@@ -116,9 +124,12 @@ const CHAIN_CONFIGS = {
         },
         RPC: {
             http: [
+                "https://optimism-sepolia.api.onfinality.io/public",
+                "https://optimism-sepolia.drpc.org",
+                "https://optimism-sepolia.gateway.tenderly.co",
                 "https://optimism-sepolia-rpc.publicnode.com",
                 "https://sepolia.optimism.io",
-                "https://opt-sepolia.g.alchemy.com/v2/oBUuDpANEqYYdeWGf9BTB",
+                "https://opt-sepolia.g.alchemy.com/v2/oBUuDpANEqYYdeWGf9BTB"
             ],
         },
         confirmations: 10,

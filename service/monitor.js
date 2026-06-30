@@ -148,6 +148,7 @@ const contractCache = new Map();
 const gasFeeCache = new Map();
 const hyperlaneQuoteCache = new Map();
 const SUPPORTED_TOKEN_ADDRESSES = getFilterTokenAddresses();
+
 SUPPORTED_TOKEN_ADDRESSES.push(process.env.HYPERLANE_RECEIVER_ADDRESS.toLowerCase());
 const VAULT_ADDRESS_REFRESH_INTERVAL_MS = 30 * 1000;
 const BLOCK_BATCH_SIZE = 100;
@@ -245,6 +246,7 @@ async function getProvider(chainCfg) {
 
     state.provider = new ethers.JsonRpcProvider(fetchRequest, chainCfg.chainId, {
         staticNetwork: true,
+        batchMaxCount: 1,
         batchStallTime: 30
     });
     clearChainRuntimeCache(chainCfg.chainId);
